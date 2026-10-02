@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { ChatPanel } from "@/components/ChatPanel";
 import { Header } from "@/components/Header";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -6,6 +8,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <Header />
       <div className="body">
         <main className="main">{children}</main>
+        <Suspense>
+          <ChatPanel />
+        </Suspense>
       </div>
       <footer className="footer">
         Données des cartes : TCGdex (licence MIT). Pokémon et tous les noms et images associés sont des marques et
