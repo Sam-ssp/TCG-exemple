@@ -8,7 +8,7 @@ import gzip
 import json
 import re
 from collections import Counter
-from datetime import date
+from datetime import datetime
 from pathlib import Path
 from urllib.parse import quote
 
@@ -16,7 +16,7 @@ import httpx
 
 from app.text import normalize
 
-API = "https://api.tcgdex.net/v2/fr"
+API_ROOT = "https://api.tcgdex.net/v2"
 OUT = Path(__file__).resolve().parent.parent / "data" / "catalog.json.gz"
 USER_AGENT = "TCG-exemple (+https://github.com/Sam-ssp/TCG-exemple)"
 CONCURRENCY = 5
@@ -26,6 +26,22 @@ DETAIL_KEYS = (
     "attacks", "abilities", "weaknesses", "resistances", "retreat", "effect", "description",
     "evolveFrom", "trainerType", "energyType", "regulationMark", "item",
 )
+
+ASSETS = "https://assets.tcgdex.net"
+
+# TCGdex fr lists these galleries and vaults as their own sets; on the card they are part of the main set.
+# 30th-c stays separate: its numbers 001-030 repeat the main set's.
+SUBSETS = {
+    "exu": "ex10",  # Collection Zarbi -> EX Forces Cachées
+    "sma": "sm115",  # Coffre Étincelant -> Destinées Occultes
+    "swsh4.5sv": "swsh4.5",  # Coffre Étincelant -> Destinées Radieuses
+    "cel25cc": "cel25",  # Collection Classique -> Célébrations
+    "swsh9tg": "swsh9",  # Galerie de Dresseurs -> Stars Étincelantes
+    "swsh10tg": "swsh10",
+    "swsh11tg": "swsh11",
+    "swsh12tg": "swsh12",
+    "swsh12.5gg": "swsh12.5",  # Galerie Galaroise -> Zénith Suprême
+}
 
 UNKNOWN_RARITY_RANK = 45
 RARITY_RANKS = {
@@ -122,6 +138,22 @@ def build_card(raw: dict, set_id: str | None = None) -> dict:
     }
 
 
+def merge_subsets(sets: list[dict]) -> list[dict]:
+    """Drop sub-sets and add their card counts to their main set."""
+    by_id = {s["id"]: dict(s) for s in sets}
+    for child, parent in SUBSETS.items():
+        if child in by_id and parent in by_id:
+            by_id[parent]["card_count_total"] = (by_id[parent]["card_count_total"] or 0) + (by_id.pop(child)["card_count_total"] or 0)
+    return [by_id[s["id"]] for s in sets if s["id"] in by_id]
+
+
+def image_candidates(card: dict, serie_id: str, en_image: str | None) -> list[str]:
+    """Image bases to try, in order, for a card the French API gives no image for."""
+    path = f"{serie_id}/{card['set_id']}/{quote(card['local_id'], safe='')}"
+    candidates = [f"{ASSETS}/fr/{path}", en_image, f"{ASSETS}/en/{path}"]
+    return [c for i, c in enumerate(candidates) if c and c not in candidates[:i]]
+
+
 def pokemon_names(cards: list[dict]) -> list[dict]:
     """Name each Pokedex number after its shortest card name, preferring single-Pokemon cards."""
     best: dict[int, tuple] = {}
@@ -153,13 +185,24 @@ def report(catalog: dict, missing: list[str]) -> list[str]:
     return lines
 
 
-async def get_json(client: httpx.AsyncClient, limit: asyncio.Semaphore, path: str, optional: bool = False):
+async def get_json(client: httpx.AsyncClient, limit: asyncio.Semaphore, path: str, optional: bool = False, lang: str = "fr"):
     async with limit:
-        response = await client.get(API + path)
+        response = await client.get(f"{API_ROOT}/{lang}{path}")
     if optional and response.status_code == 404:
         return None
     response.raise_for_status()
     return response.json()
+
+
+async def find_image(client: httpx.AsyncClient, limit: asyncio.Semaphore, card: dict, serie_id: str) -> None:
+    """The French API omits images it has no French scan for; try the French files, then English."""
+    english = await get_json(client, limit, f"/cards/{quote(card['id'], safe='')}", optional=True, lang="en")
+    for base in image_candidates(card, serie_id, (english or {}).get("image")):
+        async with limit:
+            found = (await client.head(f"{base}/low.webp")).status_code == 200
+        if found:
+            card["image_base"] = base
+            return
 
 
 async def fetch() -> tuple[dict, list[str]]:
@@ -177,12 +220,14 @@ async def fetch() -> tuple[dict, list[str]]:
         raw_cards = await asyncio.gather(
             *(get_json(client, limit, f"/cards/{quote(card_id, safe='')}", optional=True) for _, card_id in listed)
         )
-    missing = [card_id for (_, card_id), raw in zip(listed, raw_cards) if raw is None]
-    cards = [build_card(raw, set_id) for (set_id, _), raw in zip(listed, raw_cards) if raw is not None]
+        missing = [card_id for (_, card_id), raw in zip(listed, raw_cards) if raw is None]
+        cards = [build_card(raw, SUBSETS.get(set_id, set_id)) for (set_id, _), raw in zip(listed, raw_cards) if raw is not None]
+        series_of = {detail["id"]: detail["serie"]["id"] for detail in set_details}
+        await asyncio.gather(*(find_image(client, limit, card, series_of[card["set_id"]]) for card in cards if not card["image_base"]))
     catalog = {
-        "version": date.today().isoformat(),
+        "version": datetime.now().strftime("%Y-%m-%d %H:%M"),  # databases reload when it changes
         "series": [build_series(detail, order) for order, detail in enumerate(series_details)],
-        "sets": [build_set(detail) for detail in set_details],
+        "sets": merge_subsets([build_set(detail) for detail in set_details]),
         "cards": cards,
         "pokemon": pokemon_names(cards),
     }

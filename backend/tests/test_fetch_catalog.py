@@ -135,3 +135,34 @@ def test_normalize_unifies_apostrophes_and_ligatures():
     assert normalize("Goupix d’Alola") == normalize("Goupix d'Alola") == "goupix d'alola"
     assert normalize("Nœunœuf") == "noeunoeuf"
     assert normalize("Æ") == "ae"
+
+
+def test_subsets_are_filed_under_their_main_set():
+    from scripts.fetch_catalog import SUBSETS, merge_subsets
+
+    assert SUBSETS["swsh12.5gg"] == "swsh12.5"  # Zénith Suprême Galerie Galaroise
+    assert "30th-c" not in SUBSETS  # its numbers 001-030 repeat the main set's
+    sets = [
+        {"id": "swsh12.5", "card_count_official": 159, "card_count_total": 160},
+        {"id": "swsh12.5gg", "card_count_official": 70, "card_count_total": 70},
+        {"id": "swsh12", "card_count_official": 195, "card_count_total": 215},
+    ]
+    assert merge_subsets(sets) == [
+        {"id": "swsh12.5", "card_count_official": 159, "card_count_total": 230},
+        {"id": "swsh12", "card_count_official": 195, "card_count_total": 215},
+    ]
+
+
+def test_image_candidates_try_french_files_then_english():
+    from scripts.fetch_catalog import image_candidates
+
+    card = {"id": "swsh12.5gg-GG01", "local_id": "GG01", "set_id": "swsh12.5"}
+    assert image_candidates(card, "swsh", "https://assets.tcgdex.net/en/swsh/swsh12.5/GG01") == [
+        "https://assets.tcgdex.net/fr/swsh/swsh12.5/GG01",
+        "https://assets.tcgdex.net/en/swsh/swsh12.5/GG01",
+    ]
+    odd = {"id": "exu-%3F", "local_id": "%3F", "set_id": "ex10"}
+    assert image_candidates(odd, "ex", None) == [
+        "https://assets.tcgdex.net/fr/ex/ex10/%253F",
+        "https://assets.tcgdex.net/en/ex/ex10/%253F",
+    ]

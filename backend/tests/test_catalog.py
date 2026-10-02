@@ -125,3 +125,15 @@ def test_set_groups_carry_the_set_logo(conn):
     images = {g["valeur"]: g["image"] for g in catalog.list_groups(conn, "set")}
     assert images["swsh3"] == "https://assets.tcgdex.net/fr/swsh/swsh3/logo"
     assert images["base1"] is None
+
+
+def test_prefixed_numbers_sort_after_the_main_numbers(conn):
+    # A merged gallery card (TG01) must not sit between n° 1 and n° 2 of the main set.
+    conn.execute(
+        """INSERT INTO cards (id, set_id, local_id, local_number, name, search_name, category, variants)
+           VALUES ('swsh4tg-TG01', 'swsh4', 'TG01', 1, 'Pikachu', 'pikachu', 'Pokémon', '{"holo": true}')"""
+    )
+    conn.commit()
+    expected = ["swsh4-44", "swsh4-188", "swsh4-200", "swsh4tg-TG01", "swsh4-?"]
+    assert ids(catalog.search_cards(conn, Filters(set="swsh4"))) == expected
+    assert ids(catalog.search_cards(conn, Filters(set="swsh4"), tri="numero:asc")) == expected

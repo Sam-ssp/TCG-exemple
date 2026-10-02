@@ -10,6 +10,12 @@ from app.text import normalize
 PAGE_SIZE = 60
 GroupBy = Literal["set", "pokemon", "illustrateur", "rarete"]
 
+# Card number order: plain numbers first, then each prefix group (GG, SV, TG...) by number; letters-only last.
+NUMBER_ORDER = (
+    "CASE WHEN c.local_number IS NULL THEN NULL "
+    "ELSE rtrim(c.local_id, '0123456789') || printf('%08d', c.local_number) END"
+)
+
 SORT_COLUMNS = {
     "nom": "c.search_name",
     "pokedex": "(SELECT MIN(dex_id) FROM card_pokemon WHERE card_id = c.id)",
@@ -17,11 +23,11 @@ SORT_COLUMNS = {
     "rarete": "c.rarity_rank",
     "illustrateur": "c.illustrator COLLATE NOCASE",
     "date_sortie": "s.release_date",
-    "numero": "c.local_number",
+    "numero": NUMBER_ORDER,
 }
 SORT_FIELDS = tuple(SORT_COLUMNS)
 # Every sort ends with these, so pages are stable.
-TIEBREAK = ["s.release_date ASC NULLS LAST", "c.set_id ASC", "c.local_number ASC NULLS LAST", "c.local_id ASC"]
+TIEBREAK = ["s.release_date ASC NULLS LAST", "c.set_id ASC", f"{NUMBER_ORDER} ASC NULLS LAST", "c.local_id ASC"]
 
 CARD_COLUMNS = """
     c.id, c.name AS nom, c.set_id, s.name AS set_nom, c.local_id AS numero, c.rarity AS rarete,
