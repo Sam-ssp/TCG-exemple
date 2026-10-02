@@ -16,9 +16,12 @@ export function ChatPanel() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
-  const end = useRef<HTMLDivElement>(null);
+  const list = useRef<HTMLDivElement>(null);
 
-  useEffect(() => end.current?.scrollIntoView({ behavior: "smooth" }), [messages, busy]);
+  // Scroll only the message list; scrollIntoView would also scroll the page.
+  useEffect(() => {
+    if (list.current) list.current.scrollTop = list.current.scrollHeight;
+  }, [messages, busy]);
 
   async function send(event: FormEvent) {
     event.preventDefault();
@@ -57,7 +60,7 @@ export function ChatPanel() {
         <strong>Assistant</strong>
         <button className="button secondary" onClick={() => setOpen(false)}>Fermer</button>
       </div>
-      <div className="chat-messages">
+      <div className="chat-messages" ref={list}>
         {messages.length === 0 && <p className="muted">{EXAMPLES}</p>}
         {messages.map((message, index) => (
           <div key={index} className={`message ${message.role}`}>
@@ -65,7 +68,6 @@ export function ChatPanel() {
           </div>
         ))}
         {busy && <div className="message assistant">...</div>}
-        <div ref={end} />
       </div>
       <form className="chat-form" onSubmit={send}>
         <input className="input" placeholder="Votre demande" value={input} onChange={(e) => setInput(e.target.value)} />
