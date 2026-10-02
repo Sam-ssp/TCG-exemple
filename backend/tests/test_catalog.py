@@ -109,3 +109,10 @@ def test_sets_without_cards_are_not_listed(conn):
     conn.execute("INSERT INTO sets (id, series_id, name) VALUES ('jumbo', 'base', 'Cartes Jumbo')")
     conn.commit()
     assert "jumbo" not in [g["valeur"] for g in catalog.list_groups(conn, "set")]
+
+
+def test_empty_illustrator_is_not_a_group(conn):
+    # Some French TCGdex cards carry illustrator "" instead of no value.
+    conn.execute("UPDATE cards SET illustrator = '' WHERE id = 'base1-98'")
+    conn.commit()
+    assert "" not in [g["valeur"] for g in catalog.list_groups(conn, "illustrateur")]

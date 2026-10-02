@@ -43,7 +43,7 @@ GROUP_QUERIES = {
     """,
     "illustrateur": """
         SELECT illustrator AS valeur, illustrator AS nom, COUNT(*) AS nombre, NULL AS groupe, NULL AS image
-        FROM cards WHERE illustrator IS NOT NULL
+        FROM cards WHERE illustrator IS NOT NULL AND illustrator <> ''
         GROUP BY illustrator COLLATE NOCASE ORDER BY illustrator COLLATE NOCASE
     """,
     "rarete": """
