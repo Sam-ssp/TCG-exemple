@@ -1,0 +1,9 @@
+.git
+.env
+.superpowers
+**/node_modules
+**/.next
+**/out
+**/.venv
+**/*.db
+**/__pycache__

@@ -1,5 +1,18 @@
 # TCG-exemple
-I am creating a TCG web exemple instead of the course prelegal website
 
-## Status
-🚧 This project is a work in progress. It is expected to be completed by **October 8, 2026**.
+A local web app to browse every physical Pokemon TCG card in French, manage a collection and lists, and use an AI assistant. Built as a course project, due October 8, 2026.
+
+## Run
+
+Requires Docker. For the AI assistant, add a `.env` file at the project root containing `OPENROUTER_API_KEY=...`; without it everything else works.
+
+- Mac / Linux: `./scripts/start.sh`, stop with `./scripts/stop.sh`
+- Windows: `powershell -File scripts/start.ps1`, stop with `powershell -File scripts/stop.ps1`
+
+Open http://localhost:8000 and sign in with `user` / `user`.
+
+## Data
+
+Card data: TCGdex, French first (20,039 cards), completed with the 1,344 cards TCGdex only has in English, labelled "Édition anglaise". Snapshot in `backend/data/catalog.json.gz` (see `THIRD_PARTY_NOTICES.md`); image gaps and data choices in `docs/PLAN.md`. Refresh it with `cd backend && uv run python -m scripts.fetch_catalog`, then rebuild.
+
+Design and plan: `docs/`.
