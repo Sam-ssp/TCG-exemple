@@ -103,3 +103,9 @@ def test_get_card(conn):
     assert card["pokemon"] == [{"dex_id": 25, "nom": "Pikachu"}, {"dex_id": 644, "nom": "Pikachu et Zekrom GX"}]
     with pytest.raises(NotFound):
         catalog.get_card(conn, "nope-1")
+
+
+def test_sets_without_cards_are_not_listed(conn):
+    conn.execute("INSERT INTO sets (id, series_id, name) VALUES ('jumbo', 'base', 'Cartes Jumbo')")
+    conn.commit()
+    assert "jumbo" not in [g["valeur"] for g in catalog.list_groups(conn, "set")]
