@@ -128,3 +128,10 @@ def test_build_card_uses_the_set_that_lists_it():
     raw = {"id": "pl4-AR1", "localId": "AR1", "name": "Arceus", "category": "Pokémon", "set": {"id": "pl4"}}
     assert build_card(raw, set_id="pl3")["set_id"] == "pl3"
     assert build_card(raw)["set_id"] == "pl4"
+
+
+def test_normalize_unifies_apostrophes_and_ligatures():
+    # TCGdex fr mixes ’ and ' in names; keyboards type ' and "oe".
+    assert normalize("Goupix d’Alola") == normalize("Goupix d'Alola") == "goupix d'alola"
+    assert normalize("Nœunœuf") == "noeunoeuf"
+    assert normalize("Æ") == "ae"

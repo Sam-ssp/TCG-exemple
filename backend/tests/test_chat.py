@@ -88,3 +88,10 @@ def test_five_tool_rounds_still_get_an_answer(conn):
     search = reply(tool_calls=[tool_call("c", "chercher_cartes", {"nom": "pikachu"})])
     client, calls = fake_client(search, search, search, search, search, reply("Voici."))
     assert chat.run_chat(conn, 1, USER_MESSAGE, None, client)["reponse"] == "Voici."
+
+
+def test_reply_without_choices_means_unavailable(conn):
+    # OpenRouter can answer 2xx with an error object and no choices.
+    for empty in (SimpleNamespace(choices=None), SimpleNamespace(choices=[])):
+        client, _ = fake_client(empty)
+        assert chat.run_chat(conn, 1, USER_MESSAGE, None, client)["reponse"] == chat.UNAVAILABLE

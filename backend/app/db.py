@@ -3,6 +3,8 @@ import json
 import sqlite3
 from pathlib import Path
 
+from app.text import normalize
+
 SCHEMA = Path(__file__).with_name("schema.sql")
 DEFAULT_USER = "user"
 
@@ -42,7 +44,10 @@ def load_catalog(conn: sqlite3.Connection, catalog: dict) -> None:
     with conn:
         _upsert(conn, "series", catalog["series"])
         _upsert(conn, "sets", catalog["sets"])
-        _upsert(conn, "cards", [{k: v for k, v in card.items() if k != "dex_ids"} for card in catalog["cards"]])
+        # search_name is recomputed so search follows the current normalize(), whatever fetch wrote the snapshot.
+        cards = [{**{k: v for k, v in card.items() if k != "dex_ids"}, "search_name": normalize(card["name"])}
+                 for card in catalog["cards"]]
+        _upsert(conn, "cards", cards)
         conn.executemany(
             "INSERT OR IGNORE INTO card_pokemon (card_id, dex_id) VALUES (?, ?)",
             [(card["id"], dex_id) for card in catalog["cards"] for dex_id in card["dex_ids"]],

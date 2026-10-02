@@ -40,3 +40,16 @@ def test_missing_catalog_stops_start_up(tmp_path):
 def test_foreign_keys_are_enforced(conn):
     with pytest.raises(sqlite3.IntegrityError):
         conn.execute("INSERT INTO collection_items (user_id, card_id, variant, quantity) VALUES (1, 'nope-1', 'normal', 1)")
+
+
+def test_load_catalog_recomputes_search_names(tmp_path):
+    catalog = sample_catalog()
+    catalog["cards"][0]["name"] = "Goupix d’Alola"
+    catalog["cards"][0]["search_name"] = "goupix d’alola"  # as written by an older fetch
+    path = tmp_path / "catalog.json.gz"
+    write_catalog(path, catalog)
+    db_path = str(tmp_path / "tcg.db")
+    db.init_db(db_path, str(path))
+    connection = db.connect(db_path)
+    assert connection.execute("SELECT search_name FROM cards WHERE id = 'base1-4'").fetchone()[0] == "goupix d'alola"
+    connection.close()
