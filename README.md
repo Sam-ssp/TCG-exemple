@@ -4,7 +4,7 @@ A local web app to browse every physical Pokemon TCG card in French, manage a co
 
 ## Run
 
-Requires Docker and a `.env` file at the project root containing `OPENROUTER_API_KEY=...`.
+Requires Docker. For the AI assistant, add a `.env` file at the project root containing `OPENROUTER_API_KEY=...`; without it everything else works.
 
 - Mac / Linux: `./scripts/start.sh`, stop with `./scripts/stop.sh`
 - Windows: `powershell -File scripts/start.ps1`, stop with `powershell -File scripts/stop.ps1`
