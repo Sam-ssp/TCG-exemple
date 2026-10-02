@@ -75,10 +75,16 @@ def test_stops_after_max_rounds(conn):
     looping = reply(tool_calls=[tool_call("c", "chercher_cartes", {"nom": "pikachu"})])
     client, calls = fake_client(looping)
     result = chat.run_chat(conn, 1, USER_MESSAGE, None, client)
-    assert len(calls) == chat.MAX_ROUNDS
+    assert len(calls) == chat.MAX_ROUNDS + 1  # five tool rounds, then one call for the answer
     assert result["reponse"] == "Je n'ai pas pu terminer cette demande, essayez de la reformuler."
 
 
 def test_prompt_forbids_emojis_and_markdown():
     # Replies are shown as plain text, and the project bans emojis.
     assert "emoji" in chat.SYSTEM_PROMPT and "Markdown" in chat.SYSTEM_PROMPT
+
+
+def test_five_tool_rounds_still_get_an_answer(conn):
+    search = reply(tool_calls=[tool_call("c", "chercher_cartes", {"nom": "pikachu"})])
+    client, calls = fake_client(search, search, search, search, search, reply("Voici."))
+    assert chat.run_chat(conn, 1, USER_MESSAGE, None, client)["reponse"] == "Voici."

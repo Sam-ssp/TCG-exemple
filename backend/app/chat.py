@@ -36,12 +36,15 @@ def run_chat(conn: sqlite3.Connection, user_id: int, messages: list[dict], page:
     history = [{"role": "system", "content": f"{SYSTEM_PROMPT}\nPage actuelle : {page or 'inconnue'}"}, *messages]
     actions: list[dict] = []
     try:
-        for _ in range(MAX_ROUNDS):
+        # Up to MAX_ROUNDS rounds of tool calls, plus one call for the final answer.
+        for round_number in range(MAX_ROUNDS + 1):
             message = client.chat.completions.create(
                 model=MODEL, messages=history, tools=tools.TOOL_SCHEMAS
             ).choices[0].message
             if not message.tool_calls:
                 return {"reponse": message.content or "", "actions": _unique(actions)}
+            if round_number == MAX_ROUNDS:
+                break
             history.append({
                 "role": "assistant",
                 "content": message.content or "",
