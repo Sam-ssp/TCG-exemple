@@ -83,6 +83,7 @@ function CardView() {
 
       <div className="detail">
         <h1>{data.nom}</h1>
+        {data.langue === "en" && <p className="edition-note">Édition anglaise : cette carte n&apos;existe pas en français sur TCGdex.</p>}
         <p className="subtitle">
           <Link href={filterUrl("set", data.set_id)}>{data.set_nom}</Link>, n° {data.numero}
           {data.date_sortie && <>, sortie le {new Date(data.date_sortie).toLocaleDateString("fr-FR", { dateStyle: "long" })}</>}

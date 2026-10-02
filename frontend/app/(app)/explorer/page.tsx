@@ -112,6 +112,7 @@ function SetShelf({ groups, onOpen }: { groups: Group[]; onOpen: (group: Group) 
                   <span className="logo">
                     <SetLogo group={set} />
                   </span>
+                  {set.langue === "en" && <span className="edition-en">Édition anglaise</span>}
                   <span className="caption">
                     <span>{set.nom}</span>
                     <span>{set.nombre}</span>

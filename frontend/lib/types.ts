@@ -9,11 +9,14 @@ export type CardSummary = {
   pv: number | null;
   image: string | null;
   quantite: number;
+  langue: Langue;
 };
+
+export type Langue = "fr" | "en"; // "en": English-only release
 
 export type CardPage = { cartes: CardSummary[]; total: number; page: number; pages: number };
 
-export type Group = { valeur: string; nom: string; nombre: number; groupe: string | null; image: string | null };
+export type Group = { valeur: string; nom: string; nombre: number; groupe: string | null; image: string | null; langue: Langue | null };
 
 export type ListKind = "collection" | "souhaits";
 
@@ -36,6 +39,7 @@ export type CardDetail = {
   types: string[];
   stade: string | null;
   image: string | null;
+  langue: Langue;
   variantes: string[];
   details: { attacks?: Attack[]; abilities?: { name: string; effect: string }[]; effect?: string; description?: string };
   pokemon: { dex_id: number; nom: string }[];
