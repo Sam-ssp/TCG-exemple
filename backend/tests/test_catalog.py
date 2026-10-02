@@ -80,8 +80,9 @@ def test_card_summary_fields(conn):
 
 def test_groups(conn):
     sets = catalog.list_groups(conn, "set")
+    # Newest series and sets first, as collectors browse recent sets most.
     assert [(g["valeur"], g["groupe"], g["nombre"]) for g in sets] == [
-        ("base1", "Base", 4), ("swsh3", "Épée et Bouclier", 2), ("swsh4", "Épée et Bouclier", 4),
+        ("swsh4", "Épée et Bouclier", 4), ("swsh3", "Épée et Bouclier", 2), ("base1", "Base", 4),
     ]
     pokemon = catalog.list_groups(conn, "pokemon")
     assert [(g["valeur"], g["nom"], g["nombre"]) for g in pokemon][:2] == [("6", "Dracaufeu", 2), ("25", "Pikachu", 4)]
@@ -116,3 +117,11 @@ def test_empty_illustrator_is_not_a_group(conn):
     conn.execute("UPDATE cards SET illustrator = '' WHERE id = 'base1-98'")
     conn.commit()
     assert "" not in [g["valeur"] for g in catalog.list_groups(conn, "illustrateur")]
+
+
+def test_set_groups_carry_the_set_logo(conn):
+    conn.execute("UPDATE sets SET logo_url = 'https://assets.tcgdex.net/fr/swsh/swsh3/logo' WHERE id = 'swsh3'")
+    conn.commit()
+    images = {g["valeur"]: g["image"] for g in catalog.list_groups(conn, "set")}
+    assert images["swsh3"] == "https://assets.tcgdex.net/fr/swsh/swsh3/logo"
+    assert images["base1"] is None

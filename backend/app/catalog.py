@@ -32,9 +32,9 @@ CARD_COLUMNS = """
 
 GROUP_QUERIES = {
     "set": """
-        SELECT s.id AS valeur, s.name AS nom, COUNT(c.id) AS nombre, se.name AS groupe, s.symbol_url AS image
+        SELECT s.id AS valeur, s.name AS nom, COUNT(c.id) AS nombre, se.name AS groupe, s.logo_url AS image
         FROM sets s JOIN series se ON se.id = s.series_id JOIN cards c ON c.set_id = s.id
-        GROUP BY s.id ORDER BY se.release_order, s.release_date, s.id
+        GROUP BY s.id ORDER BY se.release_order DESC, s.release_date DESC, s.id
     """,
     "pokemon": """
         SELECT CAST(p.dex_id AS TEXT) AS valeur, p.name AS nom, COUNT(*) AS nombre, NULL AS groupe, NULL AS image

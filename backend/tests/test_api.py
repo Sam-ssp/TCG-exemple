@@ -17,7 +17,7 @@ def test_sign_in_and_out(make_client):
 
 
 def test_groups_and_cards(client):
-    assert [g["valeur"] for g in client.get("/api/groupes", params={"par": "set"}).json()] == ["base1", "swsh3", "swsh4"]
+    assert [g["valeur"] for g in client.get("/api/groupes", params={"par": "set"}).json()] == ["swsh4", "swsh3", "base1"]
     assert client.get("/api/groupes", params={"par": "prix"}).status_code == 422
     page = client.get("/api/cartes", params={"pokemon": 25, "tri": "pv:desc"}).json()
     assert page["total"] == 4 and page["cartes"][0]["id"] == "swsh4-188"
