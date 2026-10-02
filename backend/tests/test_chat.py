@@ -77,3 +77,8 @@ def test_stops_after_max_rounds(conn):
     result = chat.run_chat(conn, 1, USER_MESSAGE, None, client)
     assert len(calls) == chat.MAX_ROUNDS
     assert result["reponse"] == "Je n'ai pas pu terminer cette demande, essayez de la reformuler."
+
+
+def test_prompt_forbids_emojis_and_markdown():
+    # Replies are shown as plain text, and the project bans emojis.
+    assert "emoji" in chat.SYSTEM_PROMPT and "Markdown" in chat.SYSTEM_PROMPT

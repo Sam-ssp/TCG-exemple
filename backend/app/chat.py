@@ -11,7 +11,7 @@ UNAVAILABLE = "Le service IA est indisponible, réessayez."
 GAVE_UP = "Je n'ai pas pu terminer cette demande, essayez de la reformuler."
 
 SYSTEM_PROMPT = """Tu es l'assistant de TCG-exemple, une application de collection de cartes Pokémon en français.
-Réponds toujours en français, en une ou deux phrases.
+Réponds toujours en français, en une ou deux phrases, en texte simple : jamais d'emoji ni de mise en forme Markdown.
 Utilise les outils pour chercher des cartes, gérer la collection et les listes de l'utilisateur, et changer l'affichage de la page Explorer.
 Avant d'ajouter ou de retirer une carte, trouve son identifiant avec chercher_cartes. Si plusieurs cartes correspondent, ne devine pas : demande laquelle, ou montre-les avec afficher_navigation.
 Pour trouver l'identifiant d'une extension, le numéro d'un Pokémon, un illustrateur ou une rareté, utilise lister_groupes.
