@@ -43,6 +43,25 @@ SUBSETS = {
     "swsh12.5gg": "swsh12.5",  # Galerie Galaroise -> Zénith Suprême
 }
 
+# English-only cards keep their English names and text, but use the French values the filters know.
+EN_CATEGORIES = {"Pokemon": "Pokémon", "Trainer": "Dresseur", "Energy": "Énergie"}
+EN_TYPES = {
+    "Fire": "Feu", "Water": "Eau", "Grass": "Plante", "Lightning": "Électrique", "Psychic": "Psy",
+    "Fighting": "Combat", "Darkness": "Obscurité", "Metal": "Métal", "Fairy": "Fée", "Dragon": "Dragon",
+    "Colorless": "Incolore",
+}
+EN_STAGES = {
+    "Basic": "Base", "Stage1": "Niveau 1", "Stage2": "Niveau 2", "Baby": "Bébé", "MEGA": "MÉGA",
+    "RESTORED": "Restauré", "BREAK": "TURBO", "LEVEL-UP": "Niveau Sup",
+}
+EN_RARITIES = {
+    "Common": "Commune", "Uncommon": "Peu Commune", "Rare PRIME": "Rare Prime", "LEGEND": "LÉGENDE",
+    "Black White Rare": "Rare Noir Blanc", "Amazing Rare": "Magnifique", "Radiant Rare": "Radieux Rare",
+    "Classic Collection": "Collection Classique", "Full Art Trainer": "Dresseur Full Art",
+    "Shiny Ultra Rare": "Chromatique ultra rare", "Special illustration rare": "Illustration spéciale rare",
+    "Mega Hyper Rare": "Méga Hyper Rare", "ACE SPEC Rare": "HIGH-TECH rare", "None": "Sans Rareté",
+}
+
 UNKNOWN_RARITY_RANK = 45
 RARITY_RANKS = {
     "Sans Rareté": 0,
@@ -77,6 +96,7 @@ RARITY_RANKS = {
     "Magnifique rare": 70,
     "Chromatique ultra rare": 80,
     "Illustration spéciale rare": 80,
+    "Secret Rare": 85,
     "Hyper rare": 90,
     "Méga Hyper Rare": 90,
 }
@@ -97,9 +117,10 @@ def build_series(detail: dict, order: int) -> dict:
     return {"id": detail["id"], "name": detail["name"], "logo_url": detail.get("logo"), "release_order": order}
 
 
-def build_set(detail: dict) -> dict:
+def build_set(detail: dict, lang: str = "fr") -> dict:
     count = detail.get("cardCount", {})
     return {
+        "lang": lang,
         "id": detail["id"],
         "series_id": detail["serie"]["id"],
         "name": detail["name"],
@@ -111,13 +132,30 @@ def build_set(detail: dict) -> dict:
     }
 
 
-def build_card(raw: dict, set_id: str | None = None) -> dict:
-    """set_id: the set whose card list included this card, when it differs from raw["set"]."""
+def _to_french(raw: dict) -> dict:
+    """English card with the category, types, stage, rarity and energy costs the French data uses."""
+    raw = dict(raw)
+    raw["category"] = EN_CATEGORIES.get(raw["category"], raw["category"])
+    raw["types"] = [EN_TYPES.get(t, t) for t in raw.get("types") or []]
+    if raw.get("stage"):
+        raw["stage"] = EN_STAGES.get(raw["stage"], raw["stage"])
+    if raw.get("rarity"):
+        raw["rarity"] = EN_RARITIES.get(raw["rarity"], raw["rarity"])
+    if raw.get("attacks"):
+        raw["attacks"] = [{**a, "cost": [EN_TYPES.get(t, t) for t in a.get("cost") or []]} for a in raw["attacks"]]
+    return raw
+
+
+def build_card(raw: dict, set_id: str | None = None, lang: str = "fr") -> dict:
+    """set_id: the set the card is filed under, when it differs from raw["set"]. lang "en": English-only card."""
+    if lang == "en":
+        raw = _to_french(raw)
     variants = {key: bool(raw.get("variants", {}).get(key)) for key in VARIANTS}
     if not any(variants.values()):
         variants["normal"] = True
     rarity = raw.get("rarity")
     return {
+        "lang": lang,
         "id": raw["id"],
         "set_id": set_id or raw["set"]["id"],
         "local_id": raw["localId"],
@@ -147,6 +185,12 @@ def merge_subsets(sets: list[dict]) -> list[dict]:
     return [by_id[s["id"]] for s in sets if s["id"] in by_id]
 
 
+def label_sets(sets: list[dict], cards: list[dict]) -> list[dict]:
+    """A set is an English-only release when none of its cards exists in French."""
+    french = {card["set_id"] for card in cards if card["lang"] == "fr"}
+    return [{**s, "lang": "fr" if s["id"] in french else "en"} for s in sets]
+
+
 def image_candidates(card: dict, serie_id: str, en_image: str | None) -> list[str]:
     """Image bases to try, in order, for a card the French API gives no image for."""
     path = f"{serie_id}/{card['set_id']}/{quote(card['local_id'], safe='')}"
@@ -154,15 +198,21 @@ def image_candidates(card: dict, serie_id: str, en_image: str | None) -> list[st
     return [c for i, c in enumerate(candidates) if c and c not in candidates[:i]]
 
 
+def card_set(own_set: str, listing_set: str, known_sets: set[str]) -> str:
+    """The set a card is filed under: its own set if the catalog has it, else the set that lists it."""
+    set_id = own_set if own_set in known_sets else listing_set
+    return SUBSETS.get(set_id, set_id)
+
+
 def pokemon_names(cards: list[dict]) -> list[dict]:
-    """Name each Pokedex number after its shortest card name, preferring single-Pokemon cards."""
+    """Name each Pokedex number after its shortest card name: French first, single-Pokemon cards first."""
     best: dict[int, tuple] = {}
     for card in cards:
         for dex_id in card["dex_ids"]:
-            key = (len(card["dex_ids"]) > 1, len(card["name"]), card["name"])
+            key = (card["lang"] != "fr", len(card["dex_ids"]) > 1, len(card["name"]), card["name"])
             if dex_id not in best or key < best[dex_id]:
                 best[dex_id] = key
-    return [{"dex_id": dex_id, "name": key[2]} for dex_id, key in sorted(best.items())]
+    return [{"dex_id": dex_id, "name": key[3]} for dex_id, key in sorted(best.items())]
 
 
 def report(catalog: dict, missing: list[str]) -> list[str]:
@@ -209,25 +259,50 @@ async def fetch() -> tuple[dict, list[str]]:
     limit = asyncio.Semaphore(CONCURRENCY)
     transport = httpx.AsyncHTTPTransport(retries=3)
     async with httpx.AsyncClient(timeout=30, headers={"User-Agent": USER_AGENT}, transport=transport) as client:
-        series = [s for s in await get_json(client, limit, "/series") if s["id"] not in EXCLUDED_SERIES]
-        series_details = await asyncio.gather(*(get_json(client, limit, f"/series/{s['id']}") for s in series))
-        series_details.sort(key=lambda s: s.get("releaseDate") or "9999")
-        set_ids = [s["id"] for detail in series_details for s in detail.get("sets", [])]
-        set_details = await asyncio.gather(
-            *(get_json(client, limit, f"/sets/{quote(set_id, safe='')}") for set_id in set_ids)
-        )
-        listed = [(detail["id"], c["id"]) for detail in set_details for c in detail.get("cards", [])]
-        raw_cards = await asyncio.gather(
-            *(get_json(client, limit, f"/cards/{quote(card_id, safe='')}", optional=True) for _, card_id in listed)
-        )
-        missing = [card_id for (_, card_id), raw in zip(listed, raw_cards) if raw is None]
-        cards = [build_card(raw, SUBSETS.get(set_id, set_id)) for (set_id, _), raw in zip(listed, raw_cards) if raw is not None]
-        series_of = {detail["id"]: detail["serie"]["id"] for detail in set_details}
+
+        async def many(paths: list[str], lang: str = "fr", optional: bool = False) -> list:
+            return await asyncio.gather(*(get_json(client, limit, p, optional=optional, lang=lang) for p in paths))
+
+        def card_paths(ids: list[str]) -> list[str]:
+            return [f"/cards/{quote(card_id, safe='')}" for card_id in ids]
+
+        # French catalog, then the English catalog for every set and card French lacks.
+        series = {}
+        for lang in ("en", "fr"):  # French series and names win
+            listed = [s for s in await get_json(client, limit, "/series", lang=lang) if s["id"] not in EXCLUDED_SERIES]
+            for detail in await many([f"/series/{s['id']}" for s in listed], lang):
+                series[detail["id"]] = detail
+        series_details = sorted(series.values(), key=lambda s: s.get("releaseDate") or "9999")
+        fr_set_ids = [s["id"] for d in series_details for s in d.get("sets", [])]
+        fr_sets = await many([f"/sets/{quote(i, safe='')}" for i in fr_set_ids], optional=True)
+        fr_sets = [d for d in fr_sets if d]
+        en_series = [d for d in series_details]
+        en_set_ids = []
+        for d in await many([f"/series/{d['id']}" for d in en_series], "en", optional=True):
+            en_set_ids += [s["id"] for s in (d or {}).get("sets", [])]
+        en_sets = [d for d in await many([f"/sets/{quote(i, safe='')}" for i in en_set_ids], "en", optional=True) if d]
+        fr_ids = {d["id"] for d in fr_sets}
+        en_only_sets = [d for d in en_sets if d["id"] not in fr_ids]
+        known = fr_ids | {d["id"] for d in en_only_sets}
+
+        fr_listed = [(d["id"], c["id"]) for d in fr_sets for c in d.get("cards", [])]
+        fr_raw = await many(card_paths([i for _, i in fr_listed]), optional=True)
+        cards = [build_card(raw, card_set(raw["set"]["id"], s, known)) for (s, _), raw in zip(fr_listed, fr_raw) if raw]
+        french_ids = {card["id"] for card in cards}
+        en_listed = [(d["id"], c["id"]) for d in en_sets for c in d.get("cards", []) if c["id"] not in french_ids]
+        en_raw = await many(card_paths([i for _, i in en_listed]), "en", optional=True)
+        cards += [build_card(raw, card_set(raw["set"]["id"], s, known), lang="en") for (s, _), raw in zip(en_listed, en_raw) if raw]
+        missing = [i for (_, i), raw in [*zip(fr_listed, fr_raw), *zip(en_listed, en_raw)] if raw is None]
+
+        series_of = {d["id"]: d["serie"]["id"] for d in [*fr_sets, *en_only_sets]}
         await asyncio.gather(*(find_image(client, limit, card, series_of[card["set_id"]]) for card in cards if not card["image_base"]))
+
+    sets = [build_set(d) for d in fr_sets] + [build_set(d, "en") for d in en_only_sets]
+    used_series = {s["series_id"] for s in sets}
     catalog = {
         "version": datetime.now().strftime("%Y-%m-%d %H:%M"),  # databases reload when it changes
-        "series": [build_series(detail, order) for order, detail in enumerate(series_details)],
-        "sets": merge_subsets([build_set(detail) for detail in set_details]),
+        "series": [build_series(d, order) for order, d in enumerate(d for d in series_details if d["id"] in used_series)],
+        "sets": label_sets(merge_subsets(sets), cards),
         "cards": cards,
         "pokemon": pokemon_names(cards),
     }

@@ -53,3 +53,22 @@ def test_load_catalog_recomputes_search_names(tmp_path):
     connection = db.connect(db_path)
     assert connection.execute("SELECT search_name FROM cards WHERE id = 'base1-4'").fetchone()[0] == "goupix d'alola"
     connection.close()
+
+
+def test_older_databases_gain_the_language_columns(tmp_path, catalog_file):
+    db_path = str(tmp_path / "old.db")
+    old = sqlite3.connect(db_path)
+    old.executescript(
+        "CREATE TABLE sets (id TEXT PRIMARY KEY, series_id TEXT NOT NULL, name TEXT NOT NULL, release_date TEXT,"
+        " card_count_official INTEGER, card_count_total INTEGER, logo_url TEXT, symbol_url TEXT);"
+        "CREATE TABLE cards (id TEXT PRIMARY KEY, set_id TEXT NOT NULL, local_id TEXT NOT NULL, local_number INTEGER,"
+        " name TEXT NOT NULL, search_name TEXT NOT NULL, category TEXT NOT NULL, rarity TEXT, rarity_rank INTEGER,"
+        " illustrator TEXT, hp INTEGER, types TEXT, stage TEXT, image_base TEXT, variants TEXT NOT NULL, details TEXT,"
+        " UNIQUE (set_id, local_id));"
+    )
+    old.close()
+    db.init_db(db_path, str(catalog_file))
+    connection = db.connect(db_path)
+    assert connection.execute("SELECT lang FROM cards WHERE id = 'base1-4'").fetchone()["lang"] == "fr"
+    assert connection.execute("SELECT lang FROM sets WHERE id = 'base1'").fetchone()["lang"] == "fr"
+    connection.close()

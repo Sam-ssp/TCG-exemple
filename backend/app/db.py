@@ -67,6 +67,9 @@ def init_db(db_path: str, catalog_path: str) -> None:
     try:
         conn.execute("PRAGMA journal_mode = WAL")
         conn.executescript(SCHEMA.read_text(encoding="utf-8"))
+        for table in ("sets", "cards"):  # databases created before English-only releases were added
+            if "lang" not in {row["name"] for row in conn.execute(f"PRAGMA table_info({table})")}:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN lang TEXT NOT NULL DEFAULT 'fr'")
         stored = conn.execute("SELECT value FROM meta WHERE key = 'catalog_version'").fetchone()
         if stored is None or stored["value"] != catalog["version"]:
             load_catalog(conn, catalog)

@@ -74,7 +74,7 @@ def test_card_summary_fields(conn):
     assert card == {
         "id": "swsh3-136", "nom": "Fouinar", "set_id": "swsh3", "set_nom": "Ténèbres Embrasées",
         "numero": "136", "rarete": "Peu Commune", "illustrateur": "tetsuya koizumi", "pv": 110,
-        "image": "https://assets.tcgdex.net/fr/test/swsh3/136", "quantite": 0,
+        "image": "https://assets.tcgdex.net/fr/test/swsh3/136", "langue": "fr", "quantite": 0,
     }
 
 
@@ -137,3 +137,14 @@ def test_prefixed_numbers_sort_after_the_main_numbers(conn):
     expected = ["swsh4-44", "swsh4-188", "swsh4-200", "swsh4tg-TG01", "swsh4-?"]
     assert ids(catalog.search_cards(conn, Filters(set="swsh4"))) == expected
     assert ids(catalog.search_cards(conn, Filters(set="swsh4"), tri="numero:asc")) == expected
+
+
+def test_english_only_cards_and_sets_carry_their_language(conn):
+    conn.execute("UPDATE sets SET lang = 'en' WHERE id = 'swsh4'")
+    conn.execute("UPDATE cards SET lang = 'en' WHERE set_id = 'swsh4'")
+    conn.commit()
+    langs = {c["id"]: c["langue"] for c in catalog.search_cards(conn, Filters())["cartes"]}
+    assert langs["swsh4-44"] == "en" and langs["base1-4"] == "fr"
+    assert catalog.get_card(conn, "swsh4-44")["langue"] == "en"
+    groups = {g["valeur"]: g["langue"] for g in catalog.list_groups(conn, "set")}
+    assert groups == {"swsh4": "en", "swsh3": "fr", "base1": "fr"}

@@ -31,29 +31,29 @@ TIEBREAK = ["s.release_date ASC NULLS LAST", "c.set_id ASC", f"{NUMBER_ORDER} AS
 
 CARD_COLUMNS = """
     c.id, c.name AS nom, c.set_id, s.name AS set_nom, c.local_id AS numero, c.rarity AS rarete,
-    c.illustrator AS illustrateur, c.hp AS pv, c.image_base AS image,
+    c.illustrator AS illustrateur, c.hp AS pv, c.image_base AS image, c.lang AS langue,
     COALESCE((SELECT SUM(quantity) FROM collection_items ci
               WHERE ci.card_id = c.id AND ci.user_id = ?), 0) AS quantite
 """
 
 GROUP_QUERIES = {
     "set": """
-        SELECT s.id AS valeur, s.name AS nom, COUNT(c.id) AS nombre, se.name AS groupe, s.logo_url AS image
+        SELECT s.id AS valeur, s.name AS nom, COUNT(c.id) AS nombre, se.name AS groupe, s.logo_url AS image, s.lang AS langue
         FROM sets s JOIN series se ON se.id = s.series_id JOIN cards c ON c.set_id = s.id
         GROUP BY s.id ORDER BY se.release_order DESC, s.release_date DESC, s.id
     """,
     "pokemon": """
-        SELECT CAST(p.dex_id AS TEXT) AS valeur, p.name AS nom, COUNT(*) AS nombre, NULL AS groupe, NULL AS image
+        SELECT CAST(p.dex_id AS TEXT) AS valeur, p.name AS nom, COUNT(*) AS nombre, NULL AS groupe, NULL AS image, NULL AS langue
         FROM pokemon p JOIN card_pokemon cp ON cp.dex_id = p.dex_id
         GROUP BY p.dex_id ORDER BY p.dex_id
     """,
     "illustrateur": """
-        SELECT illustrator AS valeur, illustrator AS nom, COUNT(*) AS nombre, NULL AS groupe, NULL AS image
+        SELECT illustrator AS valeur, illustrator AS nom, COUNT(*) AS nombre, NULL AS groupe, NULL AS image, NULL AS langue
         FROM cards WHERE illustrator IS NOT NULL AND illustrator <> ''
         GROUP BY illustrator COLLATE NOCASE ORDER BY illustrator COLLATE NOCASE
     """,
     "rarete": """
-        SELECT rarity AS valeur, rarity AS nom, COUNT(*) AS nombre, NULL AS groupe, NULL AS image
+        SELECT rarity AS valeur, rarity AS nom, COUNT(*) AS nombre, NULL AS groupe, NULL AS image, NULL AS langue
         FROM cards WHERE rarity IS NOT NULL
         GROUP BY rarity ORDER BY MIN(rarity_rank), rarity
     """,
@@ -158,6 +158,7 @@ def get_card(conn: sqlite3.Connection, card_id: str) -> dict:
         "types": json.loads(row["types"] or "[]"),
         "stade": row["stage"],
         "image": row["image_base"],
+        "langue": row["lang"],
         "variantes": [name for name, available in json.loads(row["variants"]).items() if available],
         "details": json.loads(row["details"] or "{}"),
         "pokemon": [dict(p) for p in pokemon],

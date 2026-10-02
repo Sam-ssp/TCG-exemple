@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS sets (
     card_count_official INTEGER,
     card_count_total    INTEGER,
     logo_url            TEXT,
-    symbol_url          TEXT
+    symbol_url          TEXT,
+    lang                TEXT NOT NULL DEFAULT 'fr'  -- 'en': English-only release
 );
 
 CREATE TABLE IF NOT EXISTS cards (
@@ -33,6 +34,7 @@ CREATE TABLE IF NOT EXISTS cards (
     image_base   TEXT,
     variants     TEXT NOT NULL,
     details      TEXT,
+    lang         TEXT NOT NULL DEFAULT 'fr',  -- 'en': English-only card
     UNIQUE (set_id, local_id)
 );
 

@@ -88,6 +88,7 @@ def test_build_set_reads_detail():
         "symbol": "https://assets.tcgdex.net/univ/swsh/swsh3/symbol",
     }
     assert build_set(detail) == {
+        "lang": "fr",
         "id": "swsh3", "series_id": "swsh", "name": "Ténèbres Embrasées", "release_date": "2020-08-14",
         "card_count_official": 189, "card_count_total": 201,
         "logo_url": "https://assets.tcgdex.net/fr/swsh/swsh3/logo",
@@ -97,9 +98,9 @@ def test_build_set_reads_detail():
 
 def test_pokemon_names_prefers_single_pokemon_cards():
     cards = [
-        {"name": "Pikachu et Zekrom GX", "dex_ids": [25, 644]},
-        {"name": "Pikachu VMAX", "dex_ids": [25]},
-        {"name": "Pikachu", "dex_ids": [25]},
+        {"name": "Pikachu et Zekrom GX", "dex_ids": [25, 644], "lang": "fr"},
+        {"name": "Pikachu VMAX", "dex_ids": [25], "lang": "fr"},
+        {"name": "Pikachu", "dex_ids": [25], "lang": "fr"},
     ]
     assert pokemon_names(cards) == [
         {"dex_id": 25, "name": "Pikachu"},
@@ -166,3 +167,54 @@ def test_image_candidates_try_french_files_then_english():
         "https://assets.tcgdex.net/fr/ex/ex10/%253F",
         "https://assets.tcgdex.net/en/ex/ex10/%253F",
     ]
+
+
+RAW_EN_BLASTOISE = {
+    "category": "Pokemon", "id": "ex7-2", "localId": "2", "name": "Dark Blastoise", "rarity": "Rare Holo",
+    "set": {"id": "ex7"}, "illustrator": "Mitsuhiro Arita", "image": "https://assets.tcgdex.net/en/ex/ex7/2",
+    "dexId": [9], "hp": 80, "types": ["Water"], "stage": "Stage2",
+    "attacks": [{"cost": ["Water", "Colorless"], "name": "Hydrocannon", "damage": 40}],
+}
+
+
+def test_english_only_cards_are_labelled_and_fit_french_filters():
+    card = build_card(RAW_EN_BLASTOISE, lang="en")
+    assert card["lang"] == "en"
+    assert card["name"] == "Dark Blastoise"  # names and text stay in English
+    assert card["category"] == "Pokémon"
+    assert json.loads(card["types"]) == ["Eau"]
+    assert card["stage"] == "Niveau 2"
+    assert card["rarity"] == "Rare Holo"
+    assert json.loads(card["details"])["attacks"][0]["cost"] == ["Eau", "Incolore"]
+    assert build_card({**RAW_EN_BLASTOISE, "rarity": "Common"}, lang="en")["rarity"] == "Commune"
+    assert build_card({**RAW_EN_BLASTOISE, "rarity": "ACE SPEC Rare"}, lang="en")["rarity"] == "HIGH-TECH rare"
+    assert build_card(RAW_FOUINAR)["lang"] == "fr"
+
+
+def test_card_set_prefers_the_cards_own_set_when_it_exists():
+    from scripts.fetch_catalog import card_set
+
+    known = {"pl3", "pl4", "swsh12.5"}
+    assert card_set("pl4", "pl3", known) == "pl4"  # Arceus AR cards listed in pl3 belong to Arceus
+    assert card_set("pl4", "pl3", {"pl3"}) == "pl3"
+    assert card_set("swsh12.5gg", "swsh12.5gg", known) == "swsh12.5"
+
+
+def test_pokemon_names_prefer_french_names():
+    cards = [
+        {"name": "Charizard", "dex_ids": [6], "lang": "en"},
+        {"name": "Dracaufeu", "dex_ids": [6], "lang": "fr"},
+        {"name": "Smeargle", "dex_ids": [235], "lang": "en"},
+    ]
+    assert pokemon_names(cards) == [{"dex_id": 6, "name": "Dracaufeu"}, {"dex_id": 235, "name": "Smeargle"}]
+
+
+def test_a_set_is_english_only_when_none_of_its_cards_is_french():
+    from scripts.fetch_catalog import label_sets
+
+    sets = [{"id": "pl4", "lang": "en"}, {"id": "jumbo", "lang": "fr"}, {"id": "pl3", "lang": "fr"}]
+    cards = [
+        {"set_id": "pl4", "lang": "fr"}, {"set_id": "pl4", "lang": "en"},
+        {"set_id": "jumbo", "lang": "en"}, {"set_id": "pl3", "lang": "fr"},
+    ]
+    assert [s["lang"] for s in label_sets(sets, cards)] == ["fr", "en", "fr"]
