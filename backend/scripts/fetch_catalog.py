@@ -30,7 +30,6 @@ DETAIL_KEYS = (
 ASSETS = "https://assets.tcgdex.net"
 
 # TCGdex fr lists these galleries and vaults as their own sets; on the card they are part of the main set.
-# 30th-c stays separate: its numbers 001-030 repeat the main set's.
 SUBSETS = {
     "exu": "ex10",  # Collection Zarbi -> EX Forces Cachées
     "sma": "sm115",  # Coffre Étincelant -> Destinées Occultes
@@ -41,7 +40,11 @@ SUBSETS = {
     "swsh11tg": "swsh11",
     "swsh12tg": "swsh12",
     "swsh12.5gg": "swsh12.5",  # Galerie Galaroise -> Zénith Suprême
+    "rc": "bw11",  # Radiant Collection -> Legendary Treasures
+    "30th-c": "30th",  # Collection Classique -> 30e Anniversaire
 }
+# 30th-c numbers 001-030 like its main set; TCGdex numbers the same kind of cards CC001 in Célébrations.
+SUBSET_NUMBER_PREFIX = {"30th-c": "CC"}
 
 # English-only cards keep their English names and text, but use the French values the filters know.
 EN_CATEGORIES = {"Pokemon": "Pokémon", "Trainer": "Dresseur", "Energy": "Énergie"}
@@ -154,12 +157,14 @@ def build_card(raw: dict, set_id: str | None = None, lang: str = "fr") -> dict:
     if not any(variants.values()):
         variants["normal"] = True
     rarity = raw.get("rarity")
+    prefix = SUBSET_NUMBER_PREFIX.get(raw["set"]["id"], "")
+    local_id = raw["localId"] if raw["localId"].startswith(prefix) else prefix + raw["localId"]
     return {
         "lang": lang,
         "id": raw["id"],
         "set_id": set_id or raw["set"]["id"],
-        "local_id": raw["localId"],
-        "local_number": local_number(raw["localId"]),
+        "local_id": local_id,
+        "local_number": local_number(local_id),
         "name": raw["name"],
         "search_name": normalize(raw["name"]),
         "category": raw["category"],
@@ -191,10 +196,15 @@ def label_sets(sets: list[dict], cards: list[dict]) -> list[dict]:
     return [{**s, "lang": "fr" if s["id"] in french else "en"} for s in sets]
 
 
-def image_candidates(card: dict, serie_id: str, en_image: str | None) -> list[str]:
-    """Image bases to try, in order, for a card the French API gives no image for."""
-    path = f"{serie_id}/{card['set_id']}/{quote(card['local_id'], safe='')}"
-    candidates = [f"{ASSETS}/fr/{path}", en_image, f"{ASSETS}/en/{path}"]
+def image_candidates(card: dict, serie_id: str, en_image: str | None, origin: tuple[str, str] | None = None) -> list[str]:
+    """Image bases to try, in order, for a card the French API gives no image for.
+
+    origin: the card's own set and number on TCGdex, when it was filed under a main set.
+    """
+    paths = [f"{serie_id}/{card['set_id']}/{quote(card['local_id'], safe='')}"]
+    if origin:
+        paths.append(f"{serie_id}/{origin[0]}/{quote(origin[1], safe='')}")
+    candidates = [*(f"{ASSETS}/fr/{p}" for p in paths), en_image, *(f"{ASSETS}/en/{p}" for p in paths)]
     return [c for i, c in enumerate(candidates) if c and c not in candidates[:i]]
 
 
@@ -244,10 +254,10 @@ async def get_json(client: httpx.AsyncClient, limit: asyncio.Semaphore, path: st
     return response.json()
 
 
-async def find_image(client: httpx.AsyncClient, limit: asyncio.Semaphore, card: dict, serie_id: str) -> None:
+async def find_image(client: httpx.AsyncClient, limit: asyncio.Semaphore, card: dict, serie_id: str, origin: tuple[str, str]) -> None:
     """The French API omits images it has no French scan for; try the French files, then English."""
     english = await get_json(client, limit, f"/cards/{quote(card['id'], safe='')}", optional=True, lang="en")
-    for base in image_candidates(card, serie_id, (english or {}).get("image")):
+    for base in image_candidates(card, serie_id, (english or {}).get("image"), origin):
         async with limit:
             found = (await client.head(f"{base}/low.webp")).status_code == 200
         if found:
@@ -295,7 +305,11 @@ async def fetch() -> tuple[dict, list[str]]:
         missing = [i for (_, i), raw in [*zip(fr_listed, fr_raw), *zip(en_listed, en_raw)] if raw is None]
 
         series_of = {d["id"]: d["serie"]["id"] for d in [*fr_sets, *en_only_sets]}
-        await asyncio.gather(*(find_image(client, limit, card, series_of[card["set_id"]]) for card in cards if not card["image_base"]))
+        origins = {raw["id"]: (raw["set"]["id"], raw["localId"]) for raw in [*fr_raw, *en_raw] if raw}
+        await asyncio.gather(*(
+            find_image(client, limit, card, series_of[card["set_id"]], origins[card["id"]])
+            for card in cards if not card["image_base"]
+        ))
 
     sets = [build_set(d) for d in fr_sets] + [build_set(d, "en") for d in en_only_sets]
     used_series = {s["series_id"] for s in sets}

@@ -142,7 +142,8 @@ def test_subsets_are_filed_under_their_main_set():
     from scripts.fetch_catalog import SUBSETS, merge_subsets
 
     assert SUBSETS["swsh12.5gg"] == "swsh12.5"  # Zénith Suprême Galerie Galaroise
-    assert "30th-c" not in SUBSETS  # its numbers 001-030 repeat the main set's
+    assert SUBSETS["rc"] == "bw11"  # Radiant Collection -> Legendary Treasures
+    assert SUBSETS["30th-c"] == "30th"
     sets = [
         {"id": "swsh12.5", "card_count_official": 159, "card_count_total": 160},
         {"id": "swsh12.5gg", "card_count_official": 70, "card_count_total": 70},
@@ -218,3 +219,14 @@ def test_a_set_is_english_only_when_none_of_its_cards_is_french():
         {"set_id": "jumbo", "lang": "en"}, {"set_id": "pl3", "lang": "fr"},
     ]
     assert [s["lang"] for s in label_sets(sets, cards)] == ["fr", "en", "fr"]
+
+
+
+def test_classic_collection_numbers_get_the_cc_prefix_when_merged():
+    # 30th-c numbers 001-030 like the main set; TCGdex names the same kind of cards CC001 in Célébrations.
+    raw = {"id": "30th-c-001", "localId": "001", "name": "Dracaufeu", "category": "Pokémon", "set": {"id": "30th-c"}}
+    card = build_card(raw, "30th")
+    assert card["id"] == "30th-c-001"
+    assert card["local_id"] == "CC001"
+    assert card["local_number"] == 1
+    assert build_card({**raw, "set": {"id": "30th"}, "id": "30th-001"}, "30th")["local_id"] == "001"
