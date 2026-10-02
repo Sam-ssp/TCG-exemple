@@ -95,14 +95,15 @@ def build_set(detail: dict) -> dict:
     }
 
 
-def build_card(raw: dict) -> dict:
+def build_card(raw: dict, set_id: str | None = None) -> dict:
+    """set_id: the set whose card list included this card, when it differs from raw["set"]."""
     variants = {key: bool(raw.get("variants", {}).get(key)) for key in VARIANTS}
     if not any(variants.values()):
         variants["normal"] = True
     rarity = raw.get("rarity")
     return {
         "id": raw["id"],
-        "set_id": raw["set"]["id"],
+        "set_id": set_id or raw["set"]["id"],
         "local_id": raw["localId"],
         "local_number": local_number(raw["localId"]),
         "name": raw["name"],
@@ -172,12 +173,12 @@ async def fetch() -> tuple[dict, list[str]]:
         set_details = await asyncio.gather(
             *(get_json(client, limit, f"/sets/{quote(set_id, safe='')}") for set_id in set_ids)
         )
-        card_ids = [c["id"] for detail in set_details for c in detail.get("cards", [])]
+        listed = [(detail["id"], c["id"]) for detail in set_details for c in detail.get("cards", [])]
         raw_cards = await asyncio.gather(
-            *(get_json(client, limit, f"/cards/{quote(card_id, safe='')}", optional=True) for card_id in card_ids)
+            *(get_json(client, limit, f"/cards/{quote(card_id, safe='')}", optional=True) for _, card_id in listed)
         )
-    missing = [card_id for card_id, raw in zip(card_ids, raw_cards) if raw is None]
-    cards = [build_card(raw) for raw in raw_cards if raw is not None]
+    missing = [card_id for (_, card_id), raw in zip(listed, raw_cards) if raw is None]
+    cards = [build_card(raw, set_id) for (set_id, _), raw in zip(listed, raw_cards) if raw is not None]
     catalog = {
         "version": date.today().isoformat(),
         "series": [build_series(detail, order) for order, detail in enumerate(series_details)],

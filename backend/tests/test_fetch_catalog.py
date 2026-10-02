@@ -121,3 +121,10 @@ def test_report_flags_gaps():
     assert "Raretés sans rang : Rareté inventée" in lines
     assert "Extension swsh3 : 1 cartes, 2 annoncées" in lines
     assert "Cartes introuvables (404) : 1 : swsh3-999" in lines
+
+
+def test_build_card_uses_the_set_that_lists_it():
+    # TCGdex fr lists the Arceus AR cards in a set while their own set id (pl4) has no French set.
+    raw = {"id": "pl4-AR1", "localId": "AR1", "name": "Arceus", "category": "Pokémon", "set": {"id": "pl4"}}
+    assert build_card(raw, set_id="pl3")["set_id"] == "pl3"
+    assert build_card(raw)["set_id"] == "pl4"
