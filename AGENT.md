@@ -1,21 +1,19 @@
-# The Project Management MVP web app
+# The TCG Collection MVP web app
 
 ## Business Requirements
 
-This project is building a Project Management App. Key features:
-- A user can sign in
-- When signed in, the user sees a Kanban board representing their project
-- The Kanban board has fixed columns that can be renamed
-- The cards on the Kanban board can be moved with drag and drop, and edited
-- There is an AI chat feature in a sidebar, available from every tab; the AI is able to create / edit / move one or more cards and attach files to them
-- A second tab holds the user's written files (title and body text), which can be created, edited, deleted and navigated
-- Files can be attached to cards; a card links to its files
+This project is building a TCG Collection webapp. Key features:
+- A user can sign in his account
+- When signed in, the user can access his collection and add new cards to his collection
+- The webapp also give access to a navigation interface for all Pokemon card sorted across various ways : by Set, by Pokemon, by Illustrator, by Rarities
+- User can create special lists in his collection.
+- There is an AI chat feature in a sidebar, available from every tab; the AI is able to add cards to the collection, find specific cards from prompt, custom sort all existing cards in the navigation interface.
 
 ## Limitations
 
 For the MVP, there will only be a user sign in (hardcoded to 'user' and 'user') but the database will support multiple users for future.
 
-For the MVP, there will only be 1 Kanban board per signed in user.
+For the MVP, there will only be 1 TCG supported: Pokémon
 
 For the MVP, this will run locally (in a docker container)
 
@@ -32,15 +30,16 @@ For the MVP, this will run locally (in a docker container)
 
 ## Starting Point
 
-A working MVP of the frontend has been built and is already in frontend. This is not yet designed for the Docker setup. It's a pure frontend-only demo.
+Database PLAN.md was created and need review and refinement.
 
 ## Color Scheme
 
-- Accent Yellow: `#ecad0a` - accent lines, highlights
-- Blue Primary: `#209dd7` - links, key sections
-- Purple Secondary: `#753991` - submit buttons, important actions
-- Dark Navy: `#032147` - main headings
-- Gray Text: `#888888` - supporting text, labels
+- Main Grey: '#F3F3ED' 
+- Main Dark Grey: '#515151' 
+- Blue Accent: '#5D5C8E' 
+- Red Accent: '#E78A78' 
+- Green Accent: '#70BC94' 
+- Yellow Accent: '#F1D3AC'
 
 ## Coding standards
 
