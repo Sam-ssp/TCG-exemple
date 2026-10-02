@@ -25,7 +25,8 @@ Whole app: `./scripts/start.sh` / `./scripts/stop.sh` (Windows: `scripts/start.p
 ## Architecture
 
 - `backend/app/catalog.py` and `collection.py` hold all data logic on SQLite; both the REST routes (`main.py`) and the AI tools (`tools.py`) call them.
-- `db.py` creates the database and loads the catalog snapshot `backend/data/catalog.json.gz` (built by `scripts/fetch_catalog.py` from TCGdex, French) when its version changes. Catalog rows are never deleted.
+- `db.py` creates the database and loads the catalog snapshot `backend/data/catalog.json.gz` when its version changes. Catalog rows are never deleted.
+- `scripts/fetch_catalog.py` builds the snapshot from TCGdex: French first, English-only sets and cards added with `lang = 'en'` (labelled "Édition anglaise"), sub-sets (galleries, vaults) filed under their main set via `SUBSETS`, missing French images filled from TCGdex files then English scans. Data choices and image gaps: `docs/PLAN.md`.
 - `chat.py` runs the OpenRouter tool loop and returns `{reponse, actions}`; the frontend applies `naviguer` (change URL) and `rafraichir` (refetch) actions.
-- The frontend is a Next.js static export served by FastAPI at `/`. The explorer's state lives in the URL (`lib/explorer.ts`).
+- The frontend is a Next.js 16 static export served by FastAPI at `/` (read `frontend/AGENTS.md`: Next 16 docs are in `node_modules/next/dist/docs/`). The explorer's state lives in the URL (`lib/explorer.ts`). Styles are plain CSS tokens in `app/globals.css`.
 - Design spec: `docs/superpowers/specs/2026-10-02-tcg-collection-mvp-design.md`.

@@ -260,3 +260,18 @@ Every signed-in page has a header with the tabs and a collapsible chat panel on 
 | 4 (Oct 6) | Frontend: collection, lists; Dockerfile; start/stop scripts |
 | 5 (Oct 7) | AI chat: loop, tools, panel, tests |
 | 6 (Oct 8) | Buffer: fixes, README, notices, disclaimer, demo rehearsal |
+
+## 11. Changes after approval (2026-10-02)
+
+Decided with the user during implementation and review; the sections above describe the original design.
+
+- **Catalog content.** French stays the primary language. Sets and cards TCGdex only has in English are added in English, with `lang = 'en'` on `cards` and `sets` (default `'fr'`, added to older databases at start-up), and labelled "Édition anglaise" in the interface. Their rarities, types, stages and categories are mapped to the French values. Card and set summaries expose `langue`.
+- **Sub-sets.** Galleries, vaults and classic collections are filed under their main set (`SUBSETS` in `scripts/fetch_catalog.py`); 30e Anniversaire Collection Classique numbers become CC001-CC030. Card ids are unchanged.
+- **Images.** When the French API gives no image, the fetch tries the French file path, then the English scan. See `docs/PLAN.md` for the remaining gaps and the remediation plan.
+- **Sorting.** `numero` and the default order sort plain numbers first, then each prefix group (GG, SV, TG...) by number, then letters-only numbers. The set list shows newest series and sets first, with each set's logo (`logo_url`; TCGdex's set symbols are broken).
+- **Search.** `normalize` also unifies apostrophes (’ and ') and ligatures (œ, æ); `search_name` is recomputed when the catalog loads.
+- **Snapshot version** is the fetch date and time, so a same-day refetch reloads databases.
+- **Chat.** Up to 5 tool rounds plus one call for the answer; a reply without `choices` counts as unavailable; replies are plain text without emoji or Markdown. The panel's example prompts are buttons that send, and the panel starts closed below 1200 px.
+- **Card page.** One quantity update at a time (buttons disabled while a request runs).
+- **Start scripts** work without `.env`; only the AI chat is then unavailable.
+- **Design.** "Le classeur": indigo navigation rail, Bricolage Grotesque for titles and Atkinson Hyperlegible Next for the interface, set logos shelf, card sleeves with owned badges, holographic card showcase with energy-coloured attack costs, illustrated sign-in page, assistant drawer on narrow screens. The palette from `AGENT.md` is unchanged.
