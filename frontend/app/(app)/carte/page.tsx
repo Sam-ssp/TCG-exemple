@@ -22,6 +22,7 @@ function CardView() {
   const card = useApi<CardDetail>(id ? cardPath(id) : null, ["collection", "listes"]);
   const lists = useApi<CardList[]>("/api/listes", ["listes"]);
   const [message, setMessage] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false); // quantities are absolute, so one update at a time
 
   if (!id) return <p className="error">Aucune carte choisie.</p>;
   if (card.error) return <p className="error">{card.error}</p>;
@@ -30,12 +31,15 @@ function CardView() {
 
   async function run(action: () => Promise<unknown>) {
     setMessage(null);
+    setBusy(true);
     try {
       await action();
       card.reload();
       lists.reload();
     } catch (err) {
       setMessage((err as Error).message);
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -98,11 +102,11 @@ function CardView() {
             return (
               <div key={variant} className="variant-row">
                 <span className="label">{VARIANT_LABELS[variant] ?? variant}</span>
-                <button className="button secondary" disabled={quantity === 0} onClick={() => setQuantity(variant, quantity - 1)}>
+                <button className="button secondary" disabled={busy || quantity === 0} onClick={() => setQuantity(variant, quantity - 1)}>
                   -
                 </button>
                 <span>{quantity}</span>
-                <button className="button" onClick={() => setQuantity(variant, quantity + 1)}>
+                <button className="button" disabled={busy} onClick={() => setQuantity(variant, quantity + 1)}>
                   +
                 </button>
               </div>
