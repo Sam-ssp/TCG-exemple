@@ -13,6 +13,6 @@ Open http://localhost:8000 and sign in with `user` / `user`.
 
 ## Data
 
-Card data: TCGdex French catalog (20,039 cards, 187 sets), snapshot in `backend/data/catalog.json.gz` (see `THIRD_PARTY_NOTICES.md`). Refresh it with `cd backend && uv run python -m scripts.fetch_catalog`, then rebuild.
+Card data: TCGdex French catalog (20,039 cards), completed with the 1,344 cards and sets TCGdex only has in English, labelled "Édition anglaise", snapshot in `backend/data/catalog.json.gz` (see `THIRD_PARTY_NOTICES.md`). Refresh it with `cd backend && uv run python -m scripts.fetch_catalog`, then rebuild.
 
 Design and plan: `docs/`.
