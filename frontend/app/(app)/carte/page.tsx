@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { type PointerEvent, Suspense, useState } from "react";
 import { CardImage } from "@/components/CardImage";
 import { api, cardPath } from "@/lib/api";
-import { explorerUrl } from "@/lib/explorer";
+import { energyColor } from "@/lib/energy";
+import { explorerUrl, type FilterKey } from "@/lib/explorer";
 import { type CardDetail, type CardList, LIST_KIND_LABELS, VARIANT_LABELS } from "@/lib/types";
 import { useApi } from "@/lib/useApi";
 
@@ -15,6 +16,30 @@ export default function CardPage() {
       <CardView />
     </Suspense>
   );
+}
+
+const filterUrl = (key: FilterKey, value: string) =>
+  explorerUrl({ par: key === "illustrateur" || key === "rarete" || key === "pokemon" ? key : "set", filters: { [key]: value }, tri: "", page: 1 });
+
+function Energy({ type }: { type: string }) {
+  return <span className="dot" style={{ background: energyColor(type) }} title={type} />;
+}
+
+// Tilts the card toward the pointer and moves the holographic highlight with it.
+function tilt(event: PointerEvent<HTMLDivElement>) {
+  const box = event.currentTarget.getBoundingClientRect();
+  const x = (event.clientX - box.left) / box.width;
+  const y = (event.clientY - box.top) / box.height;
+  const style = event.currentTarget.style;
+  style.setProperty("--mx", `${x * 100}%`);
+  style.setProperty("--my", `${y * 100}%`);
+  style.setProperty("--ry", `${(x - 0.5) * 10}deg`);
+  style.setProperty("--rx", `${(0.5 - y) * 10}deg`);
+}
+
+function untilt(event: PointerEvent<HTMLDivElement>) {
+  event.currentTarget.style.setProperty("--rx", "0deg");
+  event.currentTarget.style.setProperty("--ry", "0deg");
 }
 
 function CardView() {
@@ -48,84 +73,104 @@ function CardView() {
   const addToList = (listId: string) =>
     run(() => api(`/api/listes/${listId}/cartes/${encodeURIComponent(data.id)}`, { method: "POST" }));
   const available = (lists.data ?? []).filter((list) => !data.listes.some((l) => l.id === list.id));
+  const { attacks, abilities, effect, description } = data.details;
 
   return (
-    <section className="card-detail">
-      <CardImage base={data.image} alt={data.nom} quality="high" />
-      <div>
+    <section className="showcase">
+      <div className="holo" onPointerMove={tilt} onPointerLeave={untilt}>
+        <CardImage base={data.image} alt={data.nom} quality="high" />
+      </div>
+
+      <div className="detail">
         <h1>{data.nom}</h1>
-        <div className="panel facts">
-          <span>Extension</span>
-          <Link href={explorerUrl({ par: "set", filters: { set: data.set_id }, tri: "", page: 1 })}>
-            {data.set_nom} ({data.serie_nom})
-          </Link>
-          <span>Numéro</span>
-          <span>{data.numero}</span>
-          <span>Date de sortie</span>
-          <span>{data.date_sortie ?? "Inconnue"}</span>
-          <span>Catégorie</span>
-          <span>{[data.categorie, data.stade].filter(Boolean).join(" · ")}</span>
+        <p className="subtitle">
+          <Link href={filterUrl("set", data.set_id)}>{data.set_nom}</Link>, n° {data.numero}
+          {data.date_sortie && <>, sortie le {new Date(data.date_sortie).toLocaleDateString("fr-FR", { dateStyle: "long" })}</>}
+        </p>
+
+        <dl className="facts">
           {data.pv !== null && (
-            <>
-              <span>PV</span>
-              <span>{data.pv}</span>
-            </>
+            <div>
+              <dt>PV</dt>
+              <dd className="big">{data.pv}</dd>
+            </div>
           )}
           {data.types.length > 0 && (
-            <>
-              <span>Types</span>
-              <span>{data.types.join(", ")}</span>
-            </>
-          )}
-          <span>Rareté</span>
-          <span>{data.rarete ?? "Non renseignée"}</span>
-          <span>Illustrateur</span>
-          <span>{data.illustrateur ?? "Non renseigné"}</span>
-          {data.pokemon.length > 0 && (
-            <>
-              <span>Pokémon</span>
-              <span>
-                {data.pokemon.map((p) => (
-                  <Link key={p.dex_id} href={explorerUrl({ par: "pokemon", filters: { pokemon: String(p.dex_id) }, tri: "", page: 1 })}>
-                    {p.nom} (n° {p.dex_id}){" "}
-                  </Link>
+            <div>
+              <dt>Type</dt>
+              <dd>
+                {data.types.map((type) => (
+                  <span key={type}>
+                    <Energy type={type} />
+                    {type}{" "}
+                  </span>
                 ))}
-              </span>
-            </>
+              </dd>
+            </div>
           )}
-        </div>
+          <div>
+            <dt>Catégorie</dt>
+            <dd>{[data.categorie, data.stade].filter(Boolean).join(", ")}</dd>
+          </div>
+          <div>
+            <dt>Rareté</dt>
+            <dd>{data.rarete ? <Link href={filterUrl("rarete", data.rarete)}>{data.rarete}</Link> : "Non renseignée"}</dd>
+          </div>
+          <div>
+            <dt>Illustration</dt>
+            <dd>{data.illustrateur ? <Link href={filterUrl("illustrateur", data.illustrateur)}>{data.illustrateur}</Link> : "Non renseignée"}</dd>
+          </div>
+          {data.pokemon.length > 0 && (
+            <div>
+              <dt>Pokédex</dt>
+              <dd>
+                {data.pokemon.map((p) => (
+                  <span key={p.dex_id}>
+                    <Link href={filterUrl("pokemon", String(p.dex_id))}>
+                      {p.nom} n° {p.dex_id}
+                    </Link>{" "}
+                  </span>
+                ))}
+              </dd>
+            </div>
+          )}
+        </dl>
 
-        <div className="panel">
-          <h2>Ma collection</h2>
+        <div className="block">
+          <h2>Dans ma collection</h2>
           {data.variantes.map((variant) => {
             const quantity = data.quantites[variant] ?? 0;
+            const label = VARIANT_LABELS[variant] ?? variant;
             return (
-              <div key={variant} className="variant-row">
-                <span className="label">{VARIANT_LABELS[variant] ?? variant}</span>
-                <button className="button secondary" disabled={busy || quantity === 0} onClick={() => setQuantity(variant, quantity - 1)}>
-                  -
-                </button>
-                <span>{quantity}</span>
-                <button className="button" disabled={busy} onClick={() => setQuantity(variant, quantity + 1)}>
-                  +
-                </button>
+              <div key={variant} className={quantity > 0 ? "stepper-row has" : "stepper-row"}>
+                <span className="label">{label}</span>
+                <span className="stepper">
+                  <button aria-label={`Retirer un exemplaire ${label}`} disabled={busy || quantity === 0} onClick={() => setQuantity(variant, quantity - 1)}>
+                    −
+                  </button>
+                  <output aria-live="polite">{quantity}</output>
+                  <button aria-label={`Ajouter un exemplaire ${label}`} disabled={busy} onClick={() => setQuantity(variant, quantity + 1)}>
+                    +
+                  </button>
+                </span>
               </div>
             );
           })}
         </div>
 
-        <div className="panel">
-          <h2>Mes listes</h2>
-          {data.listes.length === 0 && <p className="muted">Cette carte n&apos;est dans aucune liste.</p>}
-          <ul>
-            {data.listes.map((list) => (
-              <li key={list.id}>
-                <Link href={`/listes/voir/?id=${list.id}`}>{list.nom}</Link> ({LIST_KIND_LABELS[list.type]})
-              </li>
-            ))}
-          </ul>
-          {available.length > 0 && (
-            <select value="" onChange={(e) => e.target.value && addToList(e.target.value)}>
+        <div className="block">
+          <h2>Dans mes listes</h2>
+          {data.listes.length > 0 && (
+            <div className="list-chips">
+              {data.listes.map((list) => (
+                <Link key={list.id} className="list-chip" href={`/listes/voir/?id=${list.id}`}>
+                  {list.nom}
+                </Link>
+              ))}
+            </div>
+          )}
+          {available.length > 0 ? (
+            <select className="field" value="" aria-label="Ajouter à une liste" onChange={(e) => e.target.value && addToList(e.target.value)}>
               <option value="">Ajouter à une liste...</option>
               {available.map((list) => (
                 <option key={list.id} value={list.id}>
@@ -133,27 +178,47 @@ function CardView() {
                 </option>
               ))}
             </select>
+          ) : (
+            data.listes.length === 0 && (
+              <p className="muted">
+                Aucune liste pour l&apos;instant. <Link href="/listes/">Créer une liste</Link>
+              </p>
+            )
           )}
           {message && <p className="error">{message}</p>}
         </div>
 
-        {(data.details.abilities?.length || data.details.attacks?.length || data.details.effect) && (
-          <div className="panel">
-            {data.details.abilities?.map((ability) => (
-              <p key={ability.name}>
-                <strong>Talent : {ability.name}</strong> {ability.effect}
-              </p>
+        {(abilities?.length || attacks?.length || effect) && (
+          <div className="block">
+            <h2>Sur la carte</h2>
+            {abilities?.map((ability) => (
+              <div key={ability.name} className="attack">
+                <div className="attack-head">
+                  <strong>Talent : {ability.name}</strong>
+                </div>
+                <p>{ability.effect}</p>
+              </div>
             ))}
-            {data.details.attacks?.map((attack) => (
-              <p key={attack.name}>
-                <strong>{attack.name}</strong> {attack.cost?.length ? `(${attack.cost.join(", ")})` : ""} {attack.damage ?? ""}
-                {attack.effect && <><br />{attack.effect}</>}
-              </p>
+            {attacks?.map((attack) => (
+              <div key={attack.name} className="attack">
+                <div className="attack-head">
+                  {attack.cost?.length ? (
+                    <span className="cost" aria-label={`Coût : ${attack.cost.join(", ")}`}>
+                      {attack.cost.map((type, i) => (
+                        <Energy key={i} type={type} />
+                      ))}
+                    </span>
+                  ) : null}
+                  <strong>{attack.name}</strong>
+                  {attack.damage !== undefined && <span className="damage">{attack.damage}</span>}
+                </div>
+                {attack.effect && <p>{attack.effect}</p>}
+              </div>
             ))}
-            {data.details.effect && <p>{data.details.effect}</p>}
+            {effect && <p>{effect}</p>}
           </div>
         )}
-        {data.details.description && <p className="muted">{data.details.description}</p>}
+        {description && <p className="flavor">{description}</p>}
       </div>
     </section>
   );

@@ -6,6 +6,8 @@ import { api } from "@/lib/api";
 import { type CardList, LIST_KIND_LABELS, type ListKind } from "@/lib/types";
 import { useApi } from "@/lib/useApi";
 
+const KINDS: ListKind[] = ["souhaits", "collection"];
+
 export default function ListsPage() {
   const { data, error, reload } = useApi<CardList[]>("/api/listes", ["listes"]);
   const [name, setName] = useState("");
@@ -41,28 +43,35 @@ export default function ListsPage() {
 
   return (
     <section>
-      <h1>Mes listes</h1>
-      <form className="form-row" onSubmit={create}>
-        <input className="input" placeholder="Nom de la nouvelle liste" value={name} onChange={(e) => setName(e.target.value)} />
-        <select value={kind} onChange={(e) => setKind(e.target.value as ListKind)}>
-          <option value="souhaits">Recherchées (n&apos;importe quelle carte)</option>
-          <option value="collection">Collection (cartes possédées)</option>
-        </select>
+      <div className="page-head">
+        <div>
+          <h1>Mes listes</h1>
+          <p>Une liste Collection range des cartes que vous possédez ; une liste Recherchées accepte n&apos;importe quelle carte.</p>
+        </div>
+      </div>
+      <form className="create-list" onSubmit={create}>
+        <input className="field" placeholder="Nom de la nouvelle liste" aria-label="Nom de la nouvelle liste" value={name} onChange={(e) => setName(e.target.value)} />
+        <div className="segmented" role="group" aria-label="Type de liste">
+          {KINDS.map((k) => (
+            <button key={k} type="button" aria-pressed={kind === k} onClick={() => setKind(k)}>
+              {LIST_KIND_LABELS[k]}
+            </button>
+          ))}
+        </div>
         <button className="button" type="submit" disabled={!name.trim()}>
-          Créer
+          Créer la liste
         </button>
       </form>
       {message && <p className="error">{message}</p>}
       {error && <p className="error">{error}</p>}
-      {data && data.length === 0 && <p className="empty">Aucune liste pour le moment.</p>}
+      {data && data.length === 0 && <p className="empty">Aucune liste pour l&apos;instant. Donnez un nom à votre première liste ci-dessus.</p>}
       <ul className="lists">
         {data?.map((list) => (
           <li key={list.id} className="list-row">
             <Link href={`/listes/voir/?id=${list.id}`}>{list.nom}</Link>
-            <span className="muted">
-              {LIST_KIND_LABELS[list.type]} · {list.nombre} cartes
-            </span>
-            <button className="button secondary" onClick={() => rename(list)}>
+            <span className={`badge ${list.type}`}>{LIST_KIND_LABELS[list.type]}</span>
+            <span className="grow muted">{list.nombre === 1 ? "1 carte" : `${list.nombre} cartes`}</span>
+            <button className="button quiet" onClick={() => rename(list)}>
               Renommer
             </button>
             <button className="button danger" onClick={() => remove(list)}>

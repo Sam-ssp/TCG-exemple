@@ -23,7 +23,7 @@ it("sends one update at a time so quick clicks are not lost", async () => {
   });
   vi.stubGlobal("fetch", fetchMock);
   render(<CardPage />);
-  const plus = await screen.findByRole("button", { name: "+" });
+  const plus = await screen.findByRole("button", { name: "Ajouter un exemplaire Holo" });
   fireEvent.click(plus);
   fireEvent.click(plus);
   expect(fetchMock.mock.calls.filter(([, init]) => init?.method === "PUT")).toHaveLength(1);

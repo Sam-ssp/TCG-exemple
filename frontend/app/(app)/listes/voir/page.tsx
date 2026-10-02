@@ -45,22 +45,32 @@ function ListView() {
 
   return (
     <section>
-      <p>
-        <Link href="/listes/">Mes listes</Link>
-      </p>
-      <h1>{data.nom}</h1>
-      <p className="muted">
-        {LIST_KIND_LABELS[data.type]} · {data.nombre} cartes
-      </p>
+      <Link className="back" href="/listes/">
+        Mes listes
+      </Link>
+      <div className="page-head">
+        <div>
+          <h1>{data.nom}</h1>
+          <p>
+            <span className={`badge ${data.type}`}>{LIST_KIND_LABELS[data.type]}</span> {data.nombre === 1 ? "1 carte" : `${data.nombre} cartes`}
+          </p>
+        </div>
+      </div>
       {message && <p className="error">{message}</p>}
-      <CardGrid
-        cards={data.cartes.cartes}
-        renderAction={(card) => (
-          <button className="button secondary" onClick={() => removeCard(card.id)}>
-            Retirer
-          </button>
-        )}
-      />
+      {data.nombre === 0 ? (
+        <p className="empty">
+          Cette liste est vide. Ouvrez une carte depuis <Link href="/explorer/">Explorer</Link> pour l&apos;y ajouter.
+        </p>
+      ) : (
+        <CardGrid
+          cards={data.cartes.cartes}
+          renderAction={(card) => (
+            <button className="button quiet" onClick={() => removeCard(card.id)}>
+              Retirer de la liste
+            </button>
+          )}
+        />
+      )}
       <Pagination
         page={data.cartes.page}
         pages={data.cartes.pages}

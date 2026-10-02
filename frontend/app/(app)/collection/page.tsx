@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { CardGrid } from "@/components/CardGrid";
@@ -28,16 +29,22 @@ function Collection() {
 
   return (
     <section>
-      <h1>Ma collection</h1>
-      <div className="toolbar">
-        <span className="muted">{data ? `${data.total} cartes différentes` : ""}</span>
-        <SortSelect value={tri} onChange={(t) => go(t, 1)} />
+      <div className="page-head">
+        <div>
+          <h1>Ma collection</h1>
+          {data && <p>{data.total === 1 ? "1 carte différente" : `${data.total} cartes différentes`}</p>}
+        </div>
+        {data && data.total > 0 && <SortSelect value={tri} onChange={(t) => go(t, 1)} />}
       </div>
       {error && <p className="error">{error}</p>}
-      {data && (
+      {data && data.total === 0 && (
+        <p className="empty">
+          Votre classeur est vide. Ajoutez des cartes depuis <Link href="/explorer/">Explorer</Link> ou demandez à l&apos;assistant.
+        </p>
+      )}
+      {data && data.total > 0 && (
         <>
-          {data.total === 0 && <p className="empty">Votre collection est vide. Ajoutez des cartes depuis Explorer ou avec l&apos;assistant.</p>}
-          {data.total > 0 && <CardGrid cards={data.cartes} />}
+          <CardGrid cards={data.cartes} />
           <Pagination page={data.page} pages={data.pages} onPage={(p) => go(tri, p)} />
         </>
       )}

@@ -3,10 +3,10 @@ import { toQuery } from "./query";
 export type GroupBy = "set" | "pokemon" | "illustrateur" | "rarete";
 
 export const GROUP_TABS: { par: GroupBy; label: string }[] = [
-  { par: "set", label: "Par extension" },
-  { par: "pokemon", label: "Par Pokémon" },
-  { par: "illustrateur", label: "Par illustrateur" },
-  { par: "rarete", label: "Par rareté" },
+  { par: "set", label: "Extensions" },
+  { par: "pokemon", label: "Pokémon" },
+  { par: "illustrateur", label: "Illustrateurs" },
+  { par: "rarete", label: "Raretés" },
 ];
 
 export const FILTER_KEYS = ["set", "pokemon", "illustrateur", "rarete", "type", "q"] as const;
@@ -22,12 +22,12 @@ export const FILTER_LABELS: Record<FilterKey, string> = {
 };
 
 export const SORT_OPTIONS = [
-  { value: "", label: "Par défaut (date, numéro)" },
+  { value: "", label: "Date de sortie, puis numéro" },
   { value: "nom:asc", label: "Nom (A-Z)" },
   { value: "pokedex:asc", label: "Numéro de Pokédex" },
   { value: "pv:desc", label: "PV décroissants" },
   { value: "rarete:desc", label: "Rareté décroissante" },
-  { value: "illustrateur:asc", label: "Illustrateur" },
+  { value: "illustrateur:asc", label: "Illustrateur (A-Z)" },
   { value: "date_sortie:desc", label: "Plus récentes" },
   { value: "numero:asc", label: "Numéro dans l'extension" },
 ];
