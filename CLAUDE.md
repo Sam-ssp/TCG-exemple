@@ -6,10 +6,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 TCG-exemple is a trading card game (TCG) example website. It is being built in place of the course's "prelegal" website project. Target completion date: **October 8, 2026**.
 
-## Current state
+## Commands
 
-The repository holds only `README.md` so far. There is no source code, framework, package manifest, build tooling, linter, or test suite yet, so there are no build, lint, or test commands.
+Backend (from `backend/`, needs uv):
+- Install: `uv sync`
+- Dev server: `uv run uvicorn --factory app.main:create_app --reload --port 8000` (load `../.env` for the AI chat)
+- Tests: `uv run pytest`; single test: `uv run pytest tests/test_catalog.py::test_filters -v`
+- Refresh card data: `uv run python -m scripts.fetch_catalog`
 
-When the stack is chosen and scaffolded, update this file with:
-- the commands to install, run the dev server, build, lint, and run tests (including a single test)
-- the high-level architecture (for example, how card data, game state, and UI fit together)
+Frontend (from `frontend/`):
+- Install: `npm ci`
+- Dev server: `npm run dev` (http://localhost:3000, proxies `/api` to :8000)
+- Build: `npm run build` (static export to `out/`); lint: `npm run lint`
+- Tests: `npm test`; single file: `npx vitest run lib/explorer.test.ts`
+
+Whole app: `./scripts/start.sh` / `./scripts/stop.sh` (Windows: `scripts/start.ps1` / `stop.ps1`), http://localhost:8000.
+
+## Architecture
+
+- `backend/app/catalog.py` and `collection.py` hold all data logic on SQLite; both the REST routes (`main.py`) and the AI tools (`tools.py`) call them.
+- `db.py` creates the database and loads the catalog snapshot `backend/data/catalog.json.gz` (built by `scripts/fetch_catalog.py` from TCGdex, French) when its version changes. Catalog rows are never deleted.
+- `chat.py` runs the OpenRouter tool loop and returns `{reponse, actions}`; the frontend applies `naviguer` (change URL) and `rafraichir` (refetch) actions.
+- The frontend is a Next.js static export served by FastAPI at `/`. The explorer's state lives in the URL (`lib/explorer.ts`).
+- Design spec: `docs/superpowers/specs/2026-10-02-tcg-collection-mvp-design.md`.
