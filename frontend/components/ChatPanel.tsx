@@ -1,12 +1,13 @@
 "use client";
 
+import { SendHorizontal, Sparkles, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { applyActions } from "@/lib/chat";
 import type { ChatAction, ChatMessage } from "@/lib/types";
 import { useMediaQuery } from "@/lib/useMediaQuery";
-import { ChatIcon, CloseIcon } from "./Icons";
+import { IconButton } from "./IconButton";
 
 const SUGGESTIONS = [
   "Montre les cartes de Ken Sugimori par PV décroissants",
@@ -59,9 +60,7 @@ export function ChatPanel() {
   if (!open) {
     return (
       <aside className="chat-tab">
-        <button aria-label="Ouvrir l'assistant" title="Assistant" onClick={() => setChoice(true)}>
-          <ChatIcon />
-        </button>
+        <IconButton label="Ouvrir l'assistant" icon={Sparkles} tone="solid" className="large" onClick={() => setChoice(true)} />
       </aside>
     );
   }
@@ -69,15 +68,15 @@ export function ChatPanel() {
   return (
     <aside className="chat" aria-label="Assistant">
       <div className="chat-head">
+        <span className="chat-mark" aria-hidden="true">
+          <Sparkles />
+        </span>
         <h2>Assistant</h2>
-        <button className="button quiet" aria-label="Fermer l'assistant" onClick={() => setChoice(false)}>
-          <CloseIcon />
-        </button>
+        <IconButton label="Fermer l'assistant" icon={X} onClick={() => setChoice(false)} />
       </div>
       <div className="chat-messages" ref={list}>
         {messages.length === 0 && (
           <div className="chat-intro">
-            <p>Demandez une carte, un tri ou un ajout à votre collection.</p>
             {SUGGESTIONS.map((suggestion) => (
               <button key={suggestion} className="suggestion" onClick={() => send(suggestion)}>
                 {suggestion}
@@ -90,13 +89,17 @@ export function ChatPanel() {
             {message.content}
           </div>
         ))}
-        {busy && <div className="message assistant pending">Je cherche...</div>}
+        {busy && (
+          <div className="message assistant typing" role="status" aria-label="L'assistant répond">
+            <span />
+            <span />
+            <span />
+          </div>
+        )}
       </div>
       <form className="chat-form" onSubmit={submit}>
-        <input className="field" placeholder="Votre demande" aria-label="Votre demande" value={input} onChange={(e) => setInput(e.target.value)} />
-        <button className="button" type="submit" disabled={busy || !input.trim()}>
-          Envoyer
-        </button>
+        <input placeholder="Demandez une carte, un tri, un ajout…" aria-label="Votre demande" value={input} onChange={(e) => setInput(e.target.value)} />
+        <IconButton label="Envoyer" icon={SendHorizontal} tone="solid" type="submit" disabled={busy || !input.trim()} />
       </form>
     </aside>
   );

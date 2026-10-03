@@ -1,10 +1,12 @@
 "use client";
 
+import { Search, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { type FormEvent, Suspense, useState } from "react";
+import { type FormEvent, Suspense, useRef, useState } from "react";
 import { CardGrid } from "@/components/CardGrid";
-import { CloseIcon, SearchIcon } from "@/components/Icons";
+import { IconButton } from "@/components/IconButton";
 import { Pagination } from "@/components/Pagination";
+import { CardsSkeleton, LinesSkeleton, TilesSkeleton } from "@/components/Skeleton";
 import { SortSelect } from "@/components/SortSelect";
 import { logoUrl } from "@/lib/assets";
 import {
@@ -61,15 +63,27 @@ function Explorer() {
 
 function SearchBox({ initial, onSearch }: { initial: string; onSearch: (q: string) => void }) {
   const [value, setValue] = useState(initial);
+  const input = useRef<HTMLInputElement>(null);
   function submit(event: FormEvent) {
     event.preventDefault();
     onSearch(value.trim());
   }
   return (
     <form className="search" role="search" onSubmit={submit}>
-      <SearchIcon />
+      <Search />
       <label className="visually-hidden" htmlFor="search">Rechercher une carte</label>
-      <input id="search" type="search" placeholder="Rechercher une carte : Dracaufeu, Pikachu, Énergie..." value={value} onChange={(e) => setValue(e.target.value)} />
+      <input ref={input} id="search" type="search" placeholder="Dracaufeu, Pikachu, Énergie…" value={value} onChange={(e) => setValue(e.target.value)} />
+      {value && (
+        <IconButton
+          label="Effacer la recherche"
+          icon={X}
+          onClick={() => {
+            setValue("");
+            input.current?.focus();
+            if (initial) onSearch("");
+          }}
+        />
+      )}
     </form>
   );
 }
@@ -78,7 +92,7 @@ function GroupList({ state, go }: { state: ExplorerState; go: Go }) {
   const { data, error } = useApi<Group[]>(`/api/groupes?par=${state.par}`);
   const [filter, setFilter] = useState("");
   if (error) return <p className="error">{error}</p>;
-  if (!data) return <p className="muted">Chargement...</p>;
+  if (!data) return state.par === "set" ? <TilesSkeleton /> : <LinesSkeleton count={12} />;
   const needle = normalize(filter);
   const groups = data.filter((group) => normalize(group.nom).includes(needle));
   const open = (group: Group) => go({ ...state, filters: { [state.par]: group.valeur }, page: 1 });
@@ -86,7 +100,10 @@ function GroupList({ state, go }: { state: ExplorerState; go: Go }) {
 
   return (
     <div>
-      <input className="field filter-field" placeholder={`Filtrer les ${label}`} aria-label={`Filtrer les ${label}`} value={filter} onChange={(e) => setFilter(e.target.value)} />
+      <label className="filter-field">
+        <Search />
+        <input placeholder={`Filtrer les ${label}`} aria-label={`Filtrer les ${label}`} value={filter} onChange={(e) => setFilter(e.target.value)} />
+      </label>
       {groups.length === 0 && <p className="empty">Rien ne correspond à « {filter} ».</p>}
       {state.par === "set" ? <SetShelf groups={groups} onOpen={open} /> : <Index groups={groups} showDex={state.par === "pokemon"} onOpen={open} />}
     </div>
@@ -108,14 +125,15 @@ function SetShelf({ groups, onOpen }: { groups: Group[]; onOpen: (group: Group) 
           <ul className="shelf">
             {serie.sets.map((set) => (
               <li key={set.valeur}>
-                <button className="set-tile" onClick={() => onOpen(set)}>
-                  <span className="logo">
-                    <SetLogo group={set} />
-                  </span>
-                  {set.langue === "en" && <span className="edition-en">Édition anglaise</span>}
-                  <span className="caption">
-                    <span>{set.nom}</span>
-                    <span>{set.nombre}</span>
+                <button className="set-tile" onClick={() => onOpen(set)} title={set.nom} aria-label={setLabel(set)}>
+                  <SetLogo group={set} />
+                  {set.langue === "en" && (
+                    <span className="edition-en" aria-hidden="true">
+                      EN
+                    </span>
+                  )}
+                  <span className="tile-count" aria-hidden="true">
+                    {set.nombre}
                   </span>
                 </button>
               </li>
@@ -126,6 +144,9 @@ function SetShelf({ groups, onOpen }: { groups: Group[]; onOpen: (group: Group) 
     </>
   );
 }
+
+const setLabel = (set: Group) =>
+  [set.nom, set.nombre === 1 ? "1 carte" : `${set.nombre} cartes`, set.langue === "en" && "Édition anglaise"].filter(Boolean).join(", ");
 
 function SetLogo({ group }: { group: Group }) {
   const [failed, setFailed] = useState(false);
@@ -164,14 +185,16 @@ function CardResults({ state, go }: { state: ExplorerState; go: Go }) {
         <div className="chips">
           {Object.entries(state.filters).map(([key, value]) => (
             <button key={key} className="chip" onClick={() => remove(key as FilterKey)} aria-label={`Retirer le filtre ${FILTER_LABELS[key as FilterKey]} ${value}`}>
-              {FILTER_LABELS[key as FilterKey]} : {value}
-              <CloseIcon />
+              <span className="chip-key">{FILTER_LABELS[key as FilterKey]}</span>
+              {value}
+              <X />
             </button>
           ))}
         </div>
         <SortSelect value={state.tri} onChange={(tri) => go({ ...state, tri, page: 1 })} />
       </div>
       {error && <p className="error">{error}</p>}
+      {!data && !error && <CardsSkeleton />}
       {data && (
         <>
           <p className="result-count">{data.total === 1 ? "1 carte" : `${data.total} cartes`}</p>

@@ -1,5 +1,6 @@
 "use client";
 
+import { LogIn } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { api } from "@/lib/api";
@@ -39,15 +40,16 @@ export default function SignInPage() {
         <form className="signin-form" onSubmit={submit}>
           <label>
             Utilisateur
-            <input className="field" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} autoFocus />
+            <input autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} autoFocus />
           </label>
           <label>
             Mot de passe
-            <input className="field" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
           </label>
           {error && <p className="error">{error}</p>}
-          <button className="button" type="submit">
+          <button className="button large" type="submit">
             Se connecter
+            <LogIn />
           </button>
         </form>
       </div>

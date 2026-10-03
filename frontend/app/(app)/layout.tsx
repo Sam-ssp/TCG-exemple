@@ -9,8 +9,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <main className="main">
         {children}
         <footer className="footer">
-          Données des cartes : TCGdex (licence MIT). Pokémon et les noms et images associés sont des marques de Nintendo,
-          Creatures, GAME FREAK et The Pokémon Company. Ce site n&apos;est ni affilié, ni approuvé, ni sponsorisé par eux.
+          Données TCGdex (MIT). Pokémon © Nintendo, Creatures, GAME FREAK, The Pokémon Company. Site non affilié.
         </footer>
       </main>
       <Suspense>

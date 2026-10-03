@@ -1,14 +1,14 @@
 "use client";
 
+import { BookOpen, LayoutGrid, ListChecks, LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { BinderIcon, ExploreIcon, ListIcon, LogoutIcon } from "./Icons";
 
 const LINKS = [
-  { href: "/explorer/", label: "Explorer", Icon: ExploreIcon },
-  { href: "/collection/", label: "Collection", Icon: BinderIcon },
-  { href: "/listes/", label: "Listes", Icon: ListIcon },
+  { href: "/explorer/", label: "Explorer", Icon: LayoutGrid },
+  { href: "/collection/", label: "Ma collection", Icon: BookOpen },
+  { href: "/listes/", label: "Mes listes", Icon: ListChecks },
 ];
 
 export function Rail() {
@@ -22,21 +22,24 @@ export function Rail() {
 
   return (
     <nav className="rail" aria-label="Navigation principale">
-      <Link className="mark" href="/explorer/">
+      <Link className="mark" href="/explorer/" aria-label="TCG-exemple, accueil">
         TCG
-        <br />
-        ex.
       </Link>
       {LINKS.map(({ href, label, Icon }) => (
-        <Link key={href} href={href} className="nav" aria-current={pathname.startsWith(href.slice(0, -1)) ? "page" : undefined}>
+        <Link
+          key={href}
+          href={href}
+          className="nav"
+          aria-label={label}
+          data-tip={label}
+          aria-current={pathname.startsWith(href.slice(0, -1)) ? "page" : undefined}
+        >
           <Icon />
-          {label}
         </Link>
       ))}
       <span className="spacer" />
-      <button className="nav" onClick={signOut}>
-        <LogoutIcon />
-        Quitter
+      <button className="nav" aria-label="Se déconnecter" data-tip="Se déconnecter" onClick={signOut}>
+        <LogOut />
       </button>
     </nav>
   );
