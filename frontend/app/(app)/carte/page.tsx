@@ -1,9 +1,12 @@
 "use client";
 
+import { ListPlus, Minus, Plus } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { type PointerEvent, Suspense, useState } from "react";
 import { CardImage } from "@/components/CardImage";
+import { IconButton } from "@/components/IconButton";
+import { LinesSkeleton } from "@/components/Skeleton";
 import { api, cardPath } from "@/lib/api";
 import { energyColor } from "@/lib/energy";
 import { explorerUrl, type FilterKey } from "@/lib/explorer";
@@ -51,7 +54,14 @@ function CardView() {
 
   if (!id) return <p className="error">Aucune carte choisie.</p>;
   if (card.error) return <p className="error">{card.error}</p>;
-  if (!card.data) return <p className="muted">Chargement...</p>;
+  if (!card.data) {
+    return (
+      <section className="showcase" aria-busy="true">
+        <div className="skeleton card-shape" />
+        <LinesSkeleton />
+      </section>
+    );
+  }
   const data = card.data;
 
   async function run(action: () => Promise<unknown>) {
@@ -82,11 +92,17 @@ function CardView() {
       </div>
 
       <div className="detail">
-        <h1>{data.nom}</h1>
-        {data.langue === "en" && <p className="edition-note">Édition anglaise : cette carte n&apos;existe pas en français sur TCGdex.</p>}
+        <div className="detail-head">
+          <h1>{data.nom}</h1>
+          {data.langue === "en" && (
+            <span className="pill indigo" title="Cette carte n'existe pas en français sur TCGdex">
+              Édition anglaise
+            </span>
+          )}
+        </div>
         <p className="subtitle">
-          <Link href={filterUrl("set", data.set_id)}>{data.set_nom}</Link>, n° {data.numero}
-          {data.date_sortie && <>, sortie le {new Date(data.date_sortie).toLocaleDateString("fr-FR", { dateStyle: "long" })}</>}
+          <Link href={filterUrl("set", data.set_id)}>{data.set_nom}</Link> n° {data.numero}
+          {data.date_sortie && <span className="muted">, {new Date(data.date_sortie).toLocaleDateString("fr-FR", { dateStyle: "long" })}</span>}
         </p>
 
         <dl className="facts">
@@ -101,9 +117,9 @@ function CardView() {
               <dt>Type</dt>
               <dd>
                 {data.types.map((type) => (
-                  <span key={type}>
+                  <span key={type} className="type">
                     <Energy type={type} />
-                    {type}{" "}
+                    {type}
                   </span>
                 ))}
               </dd>
@@ -115,11 +131,11 @@ function CardView() {
           </div>
           <div>
             <dt>Rareté</dt>
-            <dd>{data.rarete ? <Link href={filterUrl("rarete", data.rarete)}>{data.rarete}</Link> : "Non renseignée"}</dd>
+            <dd>{data.rarete ? <Link href={filterUrl("rarete", data.rarete)}>{data.rarete}</Link> : "—"}</dd>
           </div>
           <div>
             <dt>Illustration</dt>
-            <dd>{data.illustrateur ? <Link href={filterUrl("illustrateur", data.illustrateur)}>{data.illustrateur}</Link> : "Non renseignée"}</dd>
+            <dd>{data.illustrateur ? <Link href={filterUrl("illustrateur", data.illustrateur)}>{data.illustrateur}</Link> : "—"}</dd>
           </div>
           {data.pokemon.length > 0 && (
             <div>
@@ -138,54 +154,55 @@ function CardView() {
         </dl>
 
         <div className="block">
-          <h2>Dans ma collection</h2>
-          {data.variantes.map((variant) => {
-            const quantity = data.quantites[variant] ?? 0;
-            const label = VARIANT_LABELS[variant] ?? variant;
-            return (
-              <div key={variant} className={quantity > 0 ? "stepper-row has" : "stepper-row"}>
-                <span className="label">{label}</span>
-                <span className="stepper">
-                  <button aria-label={`Retirer un exemplaire ${label}`} disabled={busy || quantity === 0} onClick={() => setQuantity(variant, quantity - 1)}>
-                    −
-                  </button>
-                  <output aria-live="polite">{quantity}</output>
-                  <button aria-label={`Ajouter un exemplaire ${label}`} disabled={busy} onClick={() => setQuantity(variant, quantity + 1)}>
-                    +
-                  </button>
-                </span>
-              </div>
-            );
-          })}
+          <h2>Ma collection</h2>
+          <div className="variants">
+            {data.variantes.map((variant) => {
+              const quantity = data.quantites[variant] ?? 0;
+              const label = VARIANT_LABELS[variant] ?? variant;
+              return (
+                <div key={variant} className={quantity > 0 ? "variant has" : "variant"}>
+                  <span className="label">{label}</span>
+                  <span className="stepper">
+                    <IconButton label={`Retirer un exemplaire ${label}`} icon={Minus} disabled={busy || quantity === 0} onClick={() => setQuantity(variant, quantity - 1)} />
+                    <output aria-live="polite">{quantity}</output>
+                    <IconButton label={`Ajouter un exemplaire ${label}`} icon={Plus} disabled={busy} onClick={() => setQuantity(variant, quantity + 1)} />
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         <div className="block">
-          <h2>Dans mes listes</h2>
-          {data.listes.length > 0 && (
-            <div className="list-chips">
-              {data.listes.map((list) => (
-                <Link key={list.id} className="list-chip" href={`/listes/voir/?id=${list.id}`}>
-                  {list.nom}
+          <h2>Mes listes</h2>
+          <div className="list-chips">
+            {data.listes.map((list) => (
+              <Link key={list.id} className={`list-chip ${list.type}`} href={`/listes/voir/?id=${list.id}`}>
+                {list.nom}
+              </Link>
+            ))}
+            {available.length > 0 ? (
+              <label className="select-pill add">
+                <ListPlus />
+                <span className="visually-hidden">Ajouter à une liste</span>
+                <select value="" onChange={(e) => e.target.value && addToList(e.target.value)}>
+                  <option value="">Ajouter à une liste</option>
+                  {available.map((list) => (
+                    <option key={list.id} value={list.id}>
+                      {list.nom} ({LIST_KIND_LABELS[list.type]})
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              data.listes.length === 0 && (
+                <Link className="select-pill add" href="/listes/">
+                  <ListPlus />
+                  Créer une liste
                 </Link>
-              ))}
-            </div>
-          )}
-          {available.length > 0 ? (
-            <select className="field" value="" aria-label="Ajouter à une liste" onChange={(e) => e.target.value && addToList(e.target.value)}>
-              <option value="">Ajouter à une liste...</option>
-              {available.map((list) => (
-                <option key={list.id} value={list.id}>
-                  {list.nom} ({LIST_KIND_LABELS[list.type]})
-                </option>
-              ))}
-            </select>
-          ) : (
-            data.listes.length === 0 && (
-              <p className="muted">
-                Aucune liste pour l&apos;instant. <Link href="/listes/">Créer une liste</Link>
-              </p>
-            )
-          )}
+              )
+            )}
+          </div>
           {message && <p className="error">{message}</p>}
         </div>
 
@@ -195,7 +212,8 @@ function CardView() {
             {abilities?.map((ability) => (
               <div key={ability.name} className="attack">
                 <div className="attack-head">
-                  <strong>Talent : {ability.name}</strong>
+                  <span className="pill yellow">Talent</span>
+                  <strong>{ability.name}</strong>
                 </div>
                 <p>{ability.effect}</p>
               </div>
@@ -204,7 +222,7 @@ function CardView() {
               <div key={attack.name} className="attack">
                 <div className="attack-head">
                   {attack.cost?.length ? (
-                    <span className="cost" aria-label={`Coût : ${attack.cost.join(", ")}`}>
+                    <span className="cost" role="img" aria-label={`Coût : ${attack.cost.join(", ")}`}>
                       {attack.cost.map((type, i) => (
                         <Energy key={i} type={type} />
                       ))}

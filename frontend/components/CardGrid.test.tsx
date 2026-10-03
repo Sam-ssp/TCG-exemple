@@ -12,5 +12,11 @@ const card = (over: Partial<CardSummary>): CardSummary => ({
 
 it("labels English-only cards", () => {
   render(<CardGrid cards={[card({}), card({ id: "base1-4", nom: "Dracaufeu", langue: "fr" })]} />);
-  expect(screen.getAllByText("Édition anglaise")).toHaveLength(1);
+  expect(screen.getAllByRole("link", { name: /Édition anglaise/ })).toHaveLength(1);
+});
+
+it("shows no caption but names each card for screen readers", () => {
+  render(<CardGrid cards={[card({ quantite: 2, image: "https://assets.tcgdex.net/en/ex/ex7/2" })]} />);
+  expect(screen.getByRole("link").getAttribute("aria-label")).toBe("Dark Blastoise, Team Rocket Returns n° 2, Édition anglaise, 2 possédées");
+  expect(screen.queryByText("Dark Blastoise")).toBeNull(); // no text under the card
 });

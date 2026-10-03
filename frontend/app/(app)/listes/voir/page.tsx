@@ -1,10 +1,13 @@
 "use client";
 
+import { ArrowLeft, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { CardGrid } from "@/components/CardGrid";
+import { IconButton } from "@/components/IconButton";
 import { Pagination } from "@/components/Pagination";
+import { CardsSkeleton } from "@/components/Skeleton";
 import { api } from "@/lib/api";
 import { toQuery } from "@/lib/query";
 import { type CardList, type CardPage, LIST_KIND_LABELS } from "@/lib/types";
@@ -31,7 +34,7 @@ function ListView() {
 
   if (!id) return <p className="error">Aucune liste choisie.</p>;
   if (error) return <p className="error">{error}</p>;
-  if (!data) return <p className="muted">Chargement...</p>;
+  if (!data) return <CardsSkeleton />;
 
   async function removeCard(cardId: string) {
     setMessage(null);
@@ -45,29 +48,26 @@ function ListView() {
 
   return (
     <section>
-      <Link className="back" href="/listes/">
-        Mes listes
-      </Link>
       <div className="page-head">
-        <div>
+        <div className="title-row">
+          <Link className="icon-button plain" href="/listes/" aria-label="Mes listes" data-tip="Mes listes">
+            <ArrowLeft />
+          </Link>
           <h1>{data.nom}</h1>
-          <p>
-            <span className={`badge ${data.type}`}>{LIST_KIND_LABELS[data.type]}</span> {data.nombre === 1 ? "1 carte" : `${data.nombre} cartes`}
-          </p>
+          <span className={`pill ${data.type}`}>{LIST_KIND_LABELS[data.type]}</span>
+          <span className="muted">{data.nombre === 1 ? "1 carte" : `${data.nombre} cartes`}</span>
         </div>
       </div>
       {message && <p className="error">{message}</p>}
       {data.nombre === 0 ? (
         <p className="empty">
-          Cette liste est vide. Ouvrez une carte depuis <Link href="/explorer/">Explorer</Link> pour l&apos;y ajouter.
+          Liste vide. <Link href="/explorer/">Parcourir les cartes</Link>
         </p>
       ) : (
         <CardGrid
           cards={data.cartes.cartes}
           renderAction={(card) => (
-            <button className="button quiet" onClick={() => removeCard(card.id)}>
-              Retirer de la liste
-            </button>
+            <IconButton label={`Retirer ${card.nom} de la liste`} icon={X} tone="solid" onClick={() => removeCard(card.id)} />
           )}
         />
       )}
